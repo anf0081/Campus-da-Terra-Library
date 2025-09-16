@@ -1,30 +1,40 @@
-const LoginForm = ({ handleLogin, username, setUsername, password, setPassword }) => (
+const LoginForm = ({ handleLogin, username, setUsername, password, setPassword, onCancel }) => (
   <div>
-    <h2>Login</h2>
-    <form onSubmit={handleLogin}>
+    <h3>Login</h3>
+    <form
+      onSubmit={e => {
+        handleLogin(e)
+        if (onCancel) onCancel()
+      }}
+    >
       <div>
         <label>
-          Username: &nbsp;
+          Username:
           <input
             id="username"
             type="text"
             value={username}
             onChange={({ target }) => setUsername(target.value)}
+            autoComplete="username"
           />
         </label>
       </div>
       <div>
         <label>
-          Password: &nbsp;
+          Password:
           <input
             id="password"
             type="password"
             value={password}
             onChange={({ target }) => setPassword(target.value)}
+            autoComplete="current-password"
           />
         </label>
       </div>
-      <button type="submit">login</button>
+      <div className="login-popup-actions">
+        <button type="submit">Login</button>
+        <button type="button" onClick={onCancel}>Cancel</button>
+      </div>
     </form>
   </div>
 )

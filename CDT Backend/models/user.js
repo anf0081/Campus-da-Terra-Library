@@ -12,6 +12,17 @@ const userSchema = mongoose.Schema({
     type: String,
     required: true
   },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    validate: {
+      validator: function(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      },
+      message: 'Please enter a valid email address'
+    }
+  },
   role: {
     type: String,
     enum: ['user', 'admin', 'tutor'],
@@ -43,7 +54,6 @@ const userSchema = mongoose.Schema({
   parentPassportExpiryDate: Date,
   parentNifNumber: String,
   contactNumber: String,
-  contactEmail: String,
 
   // Emergency Contact
   emergencyContactRelationship: String,

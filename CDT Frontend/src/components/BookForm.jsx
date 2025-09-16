@@ -18,43 +18,37 @@ const BookForm = ({ createBook }) => {
   }
 
   return (
-    <div>
+    <div className="book-form-container">
       <h2>Create new book</h2>
       <form onSubmit={handleSubmit}>
-        <div>
-          <label>
-            Title: &nbsp;
-            <input
-              type="text"
-              value={title}
-              onChange={({ target }) => setTitle(target.value)}
-              required
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            Author: &nbsp;
-            <input
-              type="text"
-              value={author}
-              onChange={({ target }) => setAuthor(target.value)}
-              required
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            URL: &nbsp;
-            <input
-              type="url"
-              value={url}
-              onChange={({ target }) => setUrl(target.value)}
-              required
-            />
-          </label>
-        </div>
-        <button type="submit">create</button>
+        <label>
+          Title:
+          <input
+            type="text"
+            value={title}
+            onChange={({ target }) => setTitle(target.value)}
+            required
+          />
+        </label>
+        <label>
+          Author:
+          <input
+            type="text"
+            value={author}
+            onChange={({ target }) => setAuthor(target.value)}
+            required
+          />
+        </label>
+        <label>
+          Image URL:
+          <input
+            type="url"
+            value={url}
+            onChange={({ target }) => setUrl(target.value)}
+            required
+          />
+        </label>
+        <button type="submit">Create</button>
       </form>
     </div>
   )
