@@ -1,0 +1,11 @@
+POST http://localhost:3003/api/books
+Content-Type: application/json
+Authorization: Bearer eyJhbGcisdsdsdsdsdNiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFubmlrYSIsImlkIjoiNjhjNzY4Y2IyYmE1M2JmMjJkMzAwNTZhIiwiaWF0IjoxNzU3OTQxNTU4LCJleHAiOjE3NTc5NDUxNTh9.-xlZXsWH5-udtKKbs7pOwj8x982tVpbZqa5eZLYE32Y
+
+{
+  "title": "Book Title Example111",
+  "author": "sd2sddsd",
+  "url": "http://example.com/book-titlesdsasdds",
+  "likes": 2,
+  "userId": "68c748751640aa8c7842f885"
+}
