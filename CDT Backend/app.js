@@ -38,8 +38,8 @@ app.use('/api/students', studentsRouter)
 app.use('/api/dashboards', dashboardsRouter)
 app.use('/api/login', loginRouter)
 
-// Catch-all handler: send back React's index.html file for client-side routing (before error middleware)
-app.get('/*', (req, res) => {
+// Serve React app for specific routes (avoiding wildcard issues)
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
 
