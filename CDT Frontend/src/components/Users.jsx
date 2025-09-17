@@ -295,7 +295,7 @@ const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
   }
 
   if (loading) {
-    return <div>Loading users...</div>
+    return <div className="loading">Loading users...</div>
   }
 
   return (

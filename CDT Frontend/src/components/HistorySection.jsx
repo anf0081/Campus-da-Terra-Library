@@ -90,7 +90,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
   return (
     <div className="dashboard-section">
       <div className="section-header">
-        <h2>📚 History</h2>
+        <h2>History</h2>
         {isAdmin && (
           <button
             className="section-action-btn"
@@ -106,7 +106,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
         {sortedHistory.length > 0 ? (
           <div className="history-timeline">
             {sortedHistory.map((event, index) => (
-              <div key={event.id || `${event.type}-${event.date}-${index}`} className="timeline-item">
+              <div key={event._id || `${event.type}-${event.date}-${index}`} className="timeline-item">
                 <div className="timeline-marker">
                   <span className="timeline-icon">{getEventIcon(event.type)}</span>
                 </div>
@@ -119,7 +119,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                   <div className="event-footer">
                     {event.type === 'receipt' && (
                       <span className={getPaymentStatusClass(event.paymentStatus)}>
-                        {event.paymentStatus === 'paid' ? '✅ Paid' : '❌ Not Paid'}
+                        {event.paymentStatus === 'paid' ? <div className="success-text">&#10003; Paid</div> : <div className="fail-text">&#10007; Not Paid</div>}
                       </span>
                     )}
                     <div className="event-actions">
@@ -129,16 +129,16 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                           className="download-btn small"
                           title="Download document"
                         >
-                          📥 Download
+                          Download
                         </button>
                       )}
                       {isAdmin && (
                         <button
-                          onClick={() => handleRemoveEvent(event.id)}
+                          onClick={() => handleRemoveEvent(event._id)}
                           className="remove-btn small"
                           title="Remove event"
                         >
-                          🗑️
+                          &#10006;
                         </button>
                       )}
                     </div>
@@ -189,33 +189,33 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                   </div>
 
                   {eventType === 'receipt' && (
-                    <>
-                      <div className="form-group">
-                        <label htmlFor="month">Month:</label>
-                        <select id="month" name="month" required>
-                          {[
-                            'January','February','March','April','May','June',
-                            'July','August','September','October','November','December'
-                          ].map((m) => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
+  <>
+    <div className="form-group">
+      <label htmlFor="month">Month:</label>
+      <select id="month" name="month" required>
+        {[
+          'January','February','March','April','May','June',
+          'July','August','September','October','November','December'
+        ].map((m) => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+      </select>
+    </div>
 
-                      <div className="form-group">
-                        <label htmlFor="year">Year:</label>
-                        <input type="number" id="year" name="year" min="2020" max="2030" required />
-                      </div>
+    <div className="form-group">
+      <label htmlFor="year">Year:</label>
+      <input type="number" id="year" name="year" min="2020" max="2030" required />
+    </div>
 
-                      <div className="form-group">
-                        <label htmlFor="paymentStatus">Payment Status:</label>
-                        <select id="paymentStatus" name="paymentStatus">
-                          <option value="not_paid">Not Paid</option>
-                          <option value="paid">Paid</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
+    <div className="form-group">
+      <label htmlFor="paymentStatus">Payment Status:</label>
+      <select id="paymentStatus" name="paymentStatus" defaultValue="not_paid">
+        <option value="not_paid">Not Paid</option>
+        <option value="paid">Paid</option>
+      </select>
+    </div>
+  </>
+)}
 
                   <div className="form-group">
                     <label htmlFor="description">Description (Optional):</label>

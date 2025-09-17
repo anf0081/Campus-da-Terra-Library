@@ -68,7 +68,7 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
   return (
     <div className="dashboard-section">
       <div className="section-header">
-        <h2>📄 Documents</h2>
+        <h2>Documents</h2>
         {isAdmin && (
           <button
             className="section-action-btn"
@@ -83,49 +83,30 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
       <div className="section-content">
         {documents?.length > 0 ? (
           <div className="documents-list">
-            {documents.map((doc) => {
-              console.log(doc);
-              return (
-              <div key={`${doc.id}`} className="document-item">
-                <div className="document-info">
-                  <span className="document-name">{doc.name}</span>
-                  <span className="document-filename">({doc.fileName})</span>
-                  {doc.uploadDate && (
-                    <span className="upload-date">
-                      Uploaded: {new Date(doc.uploadDate).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-                <div className="document-actions">
+            {documents.map((doc) => (
+              <div key={doc._id || doc.id} className="document-item">
+                <button
+                  className="document-name-btn"
+                  onClick={() => handleDownload(doc)}
+                  title="Download document"
+                >
+                  {doc.name}
+                </button>
+                {isAdmin && (
                   <button
-                    onClick={() => handleDownload(doc)}
-                    className="download-btn"
-                    title="Download document"
+                    onClick={() => handleRemoveDocument(doc._id || doc.id)}
+                    className="remove-btn"
+                    title="Remove document"
                   >
-                    📥 Download
+                    &#10006;
                   </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleRemoveDocument(doc.id)}
-                      className="remove-btn"
-                      title="Remove document"
-                    >
-                      🗑️
-                    </button>
-                  )}
-        </div>
-      </div>
-    );
-  })}
-</div>
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="no-documents">
             <p>No documents available.</p>
-            {isAdmin && (
-              <button onClick={() => setShowAddForm(true)}>
-                Add Document
-              </button>
-            )}
           </div>
         )}
       </div>

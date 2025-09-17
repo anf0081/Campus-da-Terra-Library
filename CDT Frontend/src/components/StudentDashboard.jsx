@@ -83,7 +83,7 @@ const StudentDashboard = ({ user, setMessage, setClassName }) => {
   }
 
   if (loading) {
-    return <div className="dashboard-container">Loading dashboard...</div>
+    return <div className="dashboard-container"><div className="loading">Loading dashboard...</div></div>
   }
 
   if (error) {

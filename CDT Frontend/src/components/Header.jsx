@@ -23,7 +23,7 @@ const Header = ({
     <header className="header">
       <div className="header-logo">
         <Link to="/">
-          <img src="./CDT_Logo_terra.svg" alt="Campus da Terra Library" />
+          <img src="/CDT_Logo_terra.svg" alt="Campus da Terra Library" />
         </Link>
       </div>
       <nav className="header-nav">

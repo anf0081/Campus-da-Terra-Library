@@ -402,7 +402,7 @@ const Students = ({ user, setMessage, setClassName, onTokenExpired }) => {
   }
 
   if (loading) {
-    return <div>Loading students...</div>
+    return <div className="loading">Loading students...</div>
   }
 
   // Student List View

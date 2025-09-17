@@ -4,11 +4,18 @@ const { userExtractor } = require('../utils/middleware')
 
 booksRouter.get('/', async (request, response) => {
   try {
+    const page = parseInt(request.query.page) || 1
+    const limit = parseInt(request.query.limit) || 18
+    const skip = (page - 1) * limit
+
+    const totalBooks = await Book.countDocuments()
     const books = await Book.find({})
+      .skip(skip)
+      .limit(limit)
       .populate('user', { username: 1, name: 1 })
       .populate('lending.borrower', { username: 1, name: 1 })
 
-    // Manually populate lendingHistory borrowers
+    // Populate lendingHistory borrowers
     const User = require('../models/user')
     for (let book of books) {
       for (let historyEntry of book.lendingHistory) {
@@ -19,12 +26,18 @@ booksRouter.get('/', async (request, response) => {
       }
     }
 
-    response.json(books)
+    response.json({
+      books,
+      totalBooks,
+      page,
+      totalPages: Math.ceil(totalBooks / limit),
+    })
   } catch (error) {
     console.error('Error fetching books:', error)
     response.status(500).json({ error: 'internal server error' })
   }
 })
+
 
 
 booksRouter.post('/', userExtractor, async (request, response) => {
@@ -51,9 +64,10 @@ booksRouter.post('/', userExtractor, async (request, response) => {
 })
 
 booksRouter.delete('/:id', userExtractor, async (request, response) => {
-  if (!request.user || request.user.role !== 'admin' || request.user.role !== 'tutor') {
-    return response.status(403).json({ error: 'only admins and tutors can add books' })
+  if (!request.user || (request.user.role !== 'admin' && request.user.role !== 'tutor')) {
+    return response.status(403).json({ error: 'only admins and tutors can delete books' })
   }
+
 
   const book = await Book.findById(request.params.id)
 
@@ -82,9 +96,10 @@ booksRouter.put('/:id', userExtractor, async (request, response) => {
     updateBook.likes = likes
   } else {
     // Admin updating book details
-    if (!request.user || request.user.role !== 'admin') {
-      return response.status(403).json({ error: 'only admins can edit book details' })
+    if (!request.user || (request.user.role !== 'admin' && request.user.role !== 'tutor')) {
+      return response.status(403).json({ error: 'only admins and tutors can update books' })
     }
+
 
     if (title !== undefined) updateBook.title = title
     if (author !== undefined) updateBook.author = author || 'Unknown Author'

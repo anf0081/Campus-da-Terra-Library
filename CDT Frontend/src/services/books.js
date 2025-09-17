@@ -1,9 +1,12 @@
 import apiClient, { setToken } from '../utils/apiClient'
 
-const getAll = () => {
-  const request = apiClient.get('/books')
+const getAll = ({ page = 1, limit = 18 } = {}) => {
+  const request = apiClient.get('/books', {
+    params: { page, limit }
+  })
   return request.then(response => response.data)
 }
+
 
 const create = async newObject => {
   const response = await apiClient.post('/books', newObject)

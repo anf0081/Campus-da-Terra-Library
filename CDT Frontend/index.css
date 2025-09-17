@@ -43,6 +43,33 @@ strong {
     font-weight: 600;
 }
 
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 75vh;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+.loading::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 10px;
+  border: 4px solid var(--custom-beige);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
 .note {
   color: #6c757d;
   padding: 5px 0;
@@ -112,6 +139,26 @@ ul {
   margin-bottom: 15px;
   text-align: center;
   font-family: 'Poppins', sans-serif;
+}
+
+.success-text {
+  color: #2d6930;
+  font-weight: 600;
+}
+.fail-text {
+  color: #c13d2e;
+  font-weight: 600;
+}
+
+button.remove-btn {
+    padding: 8px;
+    height: 2rem;
+    width: 2rem;
+    display: flex;
+    align-items: center;    /* vertically center */
+    justify-content: center; /* horizontally center */
+    text-align: center;      /* ensures text is centered */
+    font-size: 1rem;         /* adjust if needed */
 }
 
 .error,

@@ -7,15 +7,28 @@ import bookService from '../services/books'
 const Library = ({ user, setMessage, setClassName }) => {
   const [books, setBooks] = useState([])
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
-    bookService.getAll().then(books =>
-      setBooks(books)
-    ).catch(error => {
+  setLoading(true)
+  bookService.getAll({ page, limit: 18 })
+    .then(data => {
+      setBooks(data.books)
+      setTotalPages(data.totalPages)
+    })
+    .catch(error => {
       console.error('Error fetching books:', error)
       setBooks([])
     })
-  }, [])
+    .finally(() => setLoading(false))
+}, [page])
+
+
+  if (loading) {
+    return <div className="loading">Loading books...</div>
+  }
 
   const addBook = async (bookObject) => {
     try {
@@ -134,6 +147,12 @@ const Library = ({ user, setMessage, setClassName }) => {
         {books.map(book =>
           <Book key={book.id} book={book} user={user} onBorrow={handleBorrow} onReturn={handleReturn} onClearHistory={handleClearHistory} onUpdateBook={handleUpdateBook} onDeleteBook={handleDeleteBook} />
         )}
+      </div>
+
+      <div className="pagination">
+        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
+        <span>Page {page} of {totalPages}</span>
+        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
       </div>
 
       {user && user.role === 'admin' && (

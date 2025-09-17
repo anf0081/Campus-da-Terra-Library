@@ -7,7 +7,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003'
 const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage }) => {
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [mounted, setMounted] = useState(false) // for SSR safety
+  const [mounted, setMounted] = useState(false) 
 
   useEffect(() => {
     setMounted(true)
@@ -15,7 +15,7 @@ const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage
 
   const handleFileUpload = async (event) => {
     event.preventDefault()
-    const file = event.target.portfolioFile?.files?.[0] // safer access
+    const file = event.target.portfolioFile?.files?.[0] 
 
     if (!file) {
       showMessage('Please select a file', 'error')
@@ -60,7 +60,7 @@ const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage
   return (
     <div className="dashboard-section">
       <div className="section-header">
-        <h2>📁 Portfolio</h2>
+        <h2>Portfolio</h2>
         {isAdmin && (
           <button
             className="section-action-btn"
@@ -86,18 +86,19 @@ const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage
 
             <div className="portfolio-actions">
               <button onClick={handleDownload} className="download-btn">
-                📥 Download PDF
+                Download Portfolio
               </button>
             </div>
 
             <div className="pdf-viewer">
               <iframe
-                src={`${API_URL}${portfolio.pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
-                title="Portfolio PDF"
-                width="100%"
-                height="600px"
-                style={{ border: '1px solid #ddd', borderRadius: '4px' }}
-              />
+              src={`${API_URL}${portfolio.pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+              title="Portfolio PDF"
+              width="100%"
+              height="600px"
+              style={{ border: '1px solid #ddd', borderRadius: '4px' }}
+            />
+
             </div>
           </div>
         ) : (
