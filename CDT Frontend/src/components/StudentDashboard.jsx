@@ -106,7 +106,6 @@ const StudentDashboard = ({ user, setMessage, setClassName }) => {
       <div className="dashboard-header">
         <h1>Student Dashboard - {studentName}</h1>
         {isAdmin && <span className="admin-badge">Admin View</span>}
-        {!isAdmin && <span className="student-badge">Your Dashboard</span>}
       </div>
 
 

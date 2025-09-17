@@ -7,9 +7,9 @@ const StudentCard = ({ student, onView, onEdit, onDelete, onDashboard }) => {
       <p><strong>Nationality:</strong> {student.nationality || 'Not set'}</p>
       <p><strong>Enrollment:</strong> {student.enrollmentLength || 'Not set'}</p>
       <div className="student-actions">
+        {onDashboard && <button onClick={() => onDashboard(student.id || student._id)}>Dashboard</button>}
         <button onClick={() => onView(student)}>View</button>
         <button onClick={() => onEdit(student)}>Edit</button>
-        {onDashboard && <button onClick={() => onDashboard(student.id || student._id)} className="dashboard-btn">Dashboard</button>}
         <button onClick={() => onDelete(student.id || student._id)} className="delete-btn">Delete</button>
       </div>
     </div>

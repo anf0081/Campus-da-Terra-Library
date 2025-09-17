@@ -12,23 +12,20 @@ const Library = ({ user, setMessage, setClassName }) => {
   const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
-  setLoading(true)
-  bookService.getAll({ page, limit: 18 })
-    .then(data => {
-      setBooks(data.books)
-      setTotalPages(data.totalPages)
-    })
-    .catch(error => {
-      console.error('Error fetching books:', error)
-      setBooks([])
-    })
-    .finally(() => setLoading(false))
-}, [page])
+    setLoading(true)
+    bookService.getAll({ page, limit: 18 })
+      .then(data => {
+        setBooks(data.books)
+        setTotalPages(data.totalPages)
+      })
+      .catch(error => {
+        console.error('Error fetching books:', error)
+        setBooks([])
+      })
+      .finally(() => setLoading(false))
+  }, [page])
 
-
-  if (loading) {
-    return <div className="loading">Loading books...</div>
-  }
+  if (loading) return <div className="loading">Loading books...</div>
 
   const addBook = async (bookObject) => {
     try {
@@ -43,125 +40,115 @@ const Library = ({ user, setMessage, setClassName }) => {
       }, 5000)
     } catch {
       setMessage('Error creating book')
-      setTimeout(() => {
-        setMessage(null)
-      }, 5000)
-    }
-  }
-
-  const handleBorrow = async (bookId) => {
-    try {
-      const updatedBook = await bookService.lend(bookId)
-      setBooks(books.map(b => b.id === bookId ? updatedBook : b))
-      setMessage('Book borrowed for 3 weeks')
-      setClassName('success')
-      setTimeout(() => {
-        setMessage(null)
-        setClassName('error')
-      }, 5000)
-    } catch (error) {
-      const backendMsg = error.response?.data?.error
-      setMessage(backendMsg || 'Could not borrow book')
-      setClassName('error')
       setTimeout(() => setMessage(null), 5000)
     }
   }
 
-  const handleReturn = async (bookId) => {
+  const handleAction = async (action, bookId, data) => {
     try {
-      const updatedBook = await bookService.returnBook(bookId)
-      setBooks(books.map(b => b.id === bookId ? updatedBook : b))
-      setMessage('Book returned successfully')
+      let updatedBook
+      switch (action) {
+        case 'borrow':
+          updatedBook = await bookService.lend(bookId)
+          setMessage('Book borrowed for 3 weeks')
+          break
+        case 'return':
+          updatedBook = await bookService.returnBook(bookId)
+          setMessage('Book returned successfully')
+          break
+        case 'clearHistory':
+          updatedBook = await bookService.clearHistory(bookId)
+          setMessage('Borrowing history cleared successfully')
+          break
+        case 'update':
+          updatedBook = await bookService.update(bookId, data)
+          setMessage('Book updated successfully')
+          break
+        case 'delete':
+          await bookService.remove(bookId)
+          setBooks(books.filter(b => b.id !== bookId))
+          setMessage('Book deleted successfully')
+          setClassName('success')
+          setTimeout(() => setMessage(null), 5000)
+          return
+        default:
+          return
+      }
+      if (updatedBook) setBooks(books.map(b => b.id === bookId ? updatedBook : b))
       setClassName('success')
-      setTimeout(() => {
-        setMessage(null)
-        setClassName('error')
-      }, 5000)
     } catch (error) {
       const backendMsg = error.response?.data?.error
-      setMessage(backendMsg || 'Could not return book')
+      setMessage(backendMsg || 'Action failed')
       setClassName('error')
+    } finally {
       setTimeout(() => setMessage(null), 5000)
     }
   }
 
-  const handleClearHistory = async (bookId) => {
-    try {
-      const updatedBook = await bookService.clearHistory(bookId)
-      setBooks(books.map(b => b.id === bookId ? updatedBook : b))
-      setMessage('Borrowing history cleared successfully')
-      setClassName('success')
-      setTimeout(() => {
-        setMessage(null)
-        setClassName('error')
-      }, 5000)
-    } catch (error) {
-      const backendMsg = error.response?.data?.error
-      setMessage(backendMsg || 'Could not clear history')
-      setClassName('error')
-      setTimeout(() => setMessage(null), 5000)
-    }
-  }
+const borrowedBooks = (user?.role === 'admin')
+  ? books.filter(b => b.lending.isLent)
+  : (user ? books.filter(b => b.lending.borrower?.id === user.id) : [])
 
-  const handleUpdateBook = async (bookId, updatedData) => {
-    try {
-      const updatedBook = await bookService.update(bookId, updatedData)
-      setBooks(books.map(b => b.id === bookId ? updatedBook : b))
-      setMessage('Book updated successfully')
-      setClassName('success')
-      setTimeout(() => {
-        setMessage(null)
-        setClassName('error')
-      }, 5000)
-    } catch (error) {
-      const backendMsg = error.response?.data?.error
-      setMessage(backendMsg || 'Could not update book')
-      setClassName('error')
-      setTimeout(() => setMessage(null), 5000)
-    }
-  }
+const availableBooks = books.filter(b => !borrowedBooks.includes(b))
 
-  const handleDeleteBook = async (bookId) => {
-    try {
-      await bookService.remove(bookId)
-      setBooks(books.filter(b => b.id !== bookId))
-      setMessage('Book deleted successfully')
-      setClassName('success')
-      setTimeout(() => {
-        setMessage(null)
-        setClassName('error')
-      }, 5000)
-    } catch (error) {
-      const backendMsg = error.response?.data?.error
-      setMessage(backendMsg || 'Could not delete book')
-      setClassName('error')
-      setTimeout(() => setMessage(null), 5000)
-    }
-  }
 
   return (
     <div className="library-container">
-      <h2>Campus da Terra Library</h2>
-
-      <div className="books-grid">
-        {books.map(book =>
-          <Book key={book.id} book={book} user={user} onBorrow={handleBorrow} onReturn={handleReturn} onClearHistory={handleClearHistory} onUpdateBook={handleUpdateBook} onDeleteBook={handleDeleteBook} />
+      <div className="library-header">
+        <h2>Campus da Terra Library</h2>
+        {user && user.role === 'admin' && (
+          <button onClick={() => setShowCreateForm(true)}>Add Book</button>
         )}
       </div>
 
-      <div className="pagination">
-        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Prev</button>
-        <span>Page {page} of {totalPages}</span>
-        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
-      </div>
-
-      {user && user.role === 'admin' && (
-        <div style={{ marginTop: '2rem' }}>
-          <button onClick={() => setShowCreateForm(true)}>
-            Add Book
-          </button>
+      {borrowedBooks.length > 0 && (
+        <div className="borrowed-books">
+          <h3>Borrowed Books</h3>
+          <div className="books-grid">
+            {borrowedBooks.map(book =>
+              <Book
+                key={book.id}
+                book={book}
+                user={user}
+                onBorrow={() => handleAction('borrow', book.id)}
+                onReturn={() => handleAction('return', book.id)}
+                onClearHistory={() => handleAction('clearHistory', book.id)}
+                onUpdateBook={(data) => handleAction('update', book.id, data)}
+                onDeleteBook={() => handleAction('delete', book.id)}
+              />
+            )}
+          </div>
         </div>
       )}
+
+      <div className="available-books">
+        {borrowedBooks.length > 0 && (
+        <h3>Available Books</h3>
+        )}
+        {borrowedBooks.length === 0 && (
+        <h3>All Books</h3>
+        )}
+        <div className="books-grid">
+          {availableBooks.map(book =>
+            <Book
+              key={book.id}
+              book={book}
+              user={user}
+              onBorrow={() => handleAction('borrow', book.id)}
+              onReturn={() => handleAction('return', book.id)}
+              onClearHistory={() => handleAction('clearHistory', book.id)}
+              onUpdateBook={(data) => handleAction('update', book.id, data)}
+              onDeleteBook={() => handleAction('delete', book.id)}
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="pagination">
+        <button className="pagination-arrow" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>{'<'}</button>
+        <span>Page {page} of {totalPages}</span>
+        <button className="pagination-arrow" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>{'>'}</button>
+      </div>
 
       {showCreateForm && createPortal(
         <div className="form-popup-overlay" onClick={() => setShowCreateForm(false)}>
