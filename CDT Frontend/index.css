@@ -379,17 +379,14 @@ button:hover, .nav-link:hover, .login-popup button:hover, .book-form-container b
 
 /* Main content styling */
 .main-content {
-  padding: 40px 0px;
+  padding: 60px 0px;
   padding-right: var(--padding-right);
   padding-left: var(--padding-left);
   margin: 0 auto;
+  max-width: 1200px;
 }
 
 /* Profile component styling */
-.profile-container, .user-detail-container {
-  max-width: 1200px;
-  margin: 2rem 0;
-}
 
 .profile-grid, .detail-sections {
   display: grid;
@@ -472,18 +469,6 @@ p.profile-field {
   }
 }
 
-/* Students component styling */
-.students-container {
-  max-width: 1200px;
-  margin: 2rem 0;
-}
-
-/* Users component styling */
-.users-container {
-  max-width: 1200px;
-  margin: 2rem 0;
-}
-
 .students-actions, .users-actions {
   margin-bottom: 2rem;
   display: flex;
@@ -520,11 +505,17 @@ p.profile-field {
   font-size: 0.9rem;
 }
 
-.student-actions,
-.user-actions {
+.student-actions, .user-actions {
   display: flex;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+.library-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
 }
 
 .student-card .student-actions button,
@@ -548,10 +539,6 @@ p.profile-field {
 
 .dashboard-btn:hover {
   background-color: #2c5e2e;
-}
-
-.student-detail-container {
-  margin: 2rem 0;
 }
 
 .student-form,
@@ -669,11 +656,6 @@ p.profile-field {
   }
 }
 
-/* Library component styling */
-.library-container {
-  max-width: 1200px;
-  margin: 2rem 0;
-}
 
 .books-grid {
   display: grid;
@@ -1191,11 +1173,6 @@ p.profile-field {
     flex-direction: column;
 
 /* Dashboard Styles */
-.dashboard-container {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
-}
 
 .dashboard-header {
   margin-bottom: 2rem;
@@ -1670,7 +1647,6 @@ p.profile-field {
 /* Responsive Dashboard Styles */
 @media (max-width: 768px) {
   .dashboard-container {
-    margin: 1rem;
     padding: 0;
   }
 

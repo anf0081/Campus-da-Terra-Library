@@ -94,10 +94,10 @@ const availableBooks = books.filter(b => !borrowedBooks.includes(b))
 
   return (
     <div className="library-container">
-      <div className="library-header">
-        <h2>Campus da Terra Library</h2>
+      <h2>Campus da Terra Library</h2>
+      <div className="library-actions">
         {user && user.role === 'admin' && (
-          <button onClick={() => setShowCreateForm(true)}>Add Book</button>
+          <button onClick={() => setShowCreateForm(true)}>Add New Book</button>
         )}
       </div>
 
