@@ -1,9 +1,12 @@
 const express = require('express')
 const mongoose = require('mongoose')
+const path = require('path')
 const config = require('./utils/config')
 const logger = require('./utils/logger')
 const booksRouter = require('./controllers/books')
 const usersRouter = require('./controllers/users')
+const studentsRouter = require('./controllers/students')
+const dashboardsRouter = require('./controllers/dashboards')
 const loginRouter = require('./controllers/login')
 const middleware = require('./utils/middleware')
 const cors = require('cors')
@@ -23,8 +26,13 @@ mongoose
 
 app.use(middleware.requestLogger)
 app.use(middleware.tokenExtractor)
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+
 app.use('/api/books', booksRouter)
 app.use('/api/users', usersRouter)
+app.use('/api/students', studentsRouter)
+app.use('/api/dashboards', dashboardsRouter)
 app.use('/api/login', loginRouter)
 app.use(middleware.unknownEndpoint)
 app.use(middleware.errorHandler)

@@ -1,50 +1,317 @@
 import { useState } from 'react'
+import userService from '../services/users'
 
-const Profile = ({ user }) => {
+const Profile = ({ user, setUser, setMessage, setClassName, onTokenExpired }) => {
   const [name, setName] = useState(user?.name || '')
   const [email, setEmail] = useState(user?.email || '')
+  const [contactNumber, setContactNumber] = useState(user?.contactNumber || '')
+  const [parentStreetAddress, setParentStreetAddress] = useState(user?.parentStreetAddress || '')
+  const [parentCity, setParentCity] = useState(user?.parentCity || '')
+  const [parentPostalCode, setParentPostalCode] = useState(user?.parentPostalCode || '')
+  const [parentCountry, setParentCountry] = useState(user?.parentCountry || '')
+  const [parentNationality, setParentNationality] = useState(user?.parentNationality || '')
+  const [parentPassportNumber, setParentPassportNumber] = useState(user?.parentPassportNumber || '')
+  const [parentPassportExpiryDate, setParentPassportExpiryDate] = useState(user?.parentPassportExpiryDate ? user.parentPassportExpiryDate.split('T')[0] : '')
+  const [parentNifNumber, setParentNifNumber] = useState(user?.parentNifNumber || '')
+  const [emergencyContactRelationship, setEmergencyContactRelationship] = useState(user?.emergencyContactRelationship || '')
+  const [emergencyContactName, setEmergencyContactName] = useState(user?.emergencyContactName || '')
+  const [emergencyContactNumber, setEmergencyContactNumber] = useState(user?.emergencyContactNumber || '')
+  const [password, setPassword] = useState('')
   const [isEditing, setIsEditing] = useState(false)
 
-  const handleSave = (event) => {
+  const handleTokenExpiration = (error) => {
+    if (error.response?.status === 401 &&
+        (error.response?.data?.error === 'token expired' ||
+         error.response?.data?.error === 'token invalid')) {
+      onTokenExpired()
+      return true
+    }
+    return false
+  }
+
+  const handleEditStart = () => {
+    // Populate fields with current user data when starting to edit
+    setName(user?.name || '')
+    setEmail(user?.email || '')
+    setContactNumber(user?.contactNumber || '')
+    setParentStreetAddress(user?.parentStreetAddress || '')
+    setParentCity(user?.parentCity || '')
+    setParentPostalCode(user?.parentPostalCode || '')
+    setParentCountry(user?.parentCountry || '')
+    setParentNationality(user?.parentNationality || '')
+    setParentPassportNumber(user?.parentPassportNumber || '')
+    setParentPassportExpiryDate(user?.parentPassportExpiryDate ? user.parentPassportExpiryDate.split('T')[0] : '')
+    setParentNifNumber(user?.parentNifNumber || '')
+    setEmergencyContactRelationship(user?.emergencyContactRelationship || '')
+    setEmergencyContactName(user?.emergencyContactName || '')
+    setEmergencyContactNumber(user?.emergencyContactNumber || '')
+    setPassword('')
+    setIsEditing(true)
+  }
+
+  const handleSave = async (event) => {
     event.preventDefault()
-    // TODO: Add API call to update user profile
-    console.log('Saving profile:', { name, email })
-    setIsEditing(false)
+    console.log('Form submitted - starting save process')
+    try {
+      const profileData = {
+        name,
+        email,
+        contactNumber,
+        parentStreetAddress,
+        parentCity,
+        parentPostalCode,
+        parentCountry,
+        parentNationality,
+        parentPassportNumber,
+        parentPassportExpiryDate,
+        parentNifNumber,
+        emergencyContactRelationship,
+        emergencyContactName,
+        emergencyContactNumber
+      }
+
+      // Filter out empty string values to avoid enum validation errors
+      const cleanedProfileData = Object.fromEntries(
+        Object.entries(profileData).filter(([, value]) => value !== '')
+      )
+
+      // Only include password if it's provided
+      if (password.trim()) {
+        cleanedProfileData.password = password
+      }
+
+      console.log('Profile data to send:', cleanedProfileData)
+      console.log('User ID:', user.id)
+
+      const updatedUser = await userService.update(user.id, cleanedProfileData)
+      console.log('Received updated user:', updatedUser)
+
+      // Preserve the original token when updating user data
+      const userWithToken = { ...updatedUser, token: user.token }
+      setUser(userWithToken)
+
+      // Update localStorage with the new user data (including token)
+      window.localStorage.setItem('loggedlibraryUser', JSON.stringify(userWithToken))
+
+      setMessage('Profile updated successfully')
+      setClassName('success')
+      setIsEditing(false)
+      setTimeout(() => {
+        setMessage(null)
+        setClassName('error')
+      }, 5000)
+    } catch (error) {
+      if (handleTokenExpiration(error)) return
+      const backendMsg = error.response?.data?.error
+      setMessage(backendMsg || 'Error updating profile')
+      setClassName('error')
+      setTimeout(() => setMessage(null), 5000)
+    }
   }
 
   return (
     <div>
       <h2>Profile</h2>
-      <div style={{ maxWidth: '400px', margin: '2rem 0' }}>
+      <div className="profile-container">
         {!isEditing ? (
-          <div>
-            <p><strong>Name:</strong> {user?.name}</p>
-            <p><strong>Username:</strong> {user?.username}</p>
-            <p><strong>Email:</strong> {user?.email || 'Not set'}</p>
-            <p><strong>Role:</strong> {user?.role}</p>
-            <button onClick={() => setIsEditing(true)}>Edit Profile</button>
+          <>
+          <div className="profile-grid">
+            <div className="profile-section">
+              <h3>Login and Contact</h3>
+              <p><strong>Username:</strong> {user?.username}</p>
+              <p><strong>Password:</strong> ••••••••</p>
+              <p><strong>Role:</strong> {user?.role}</p>
+              <p><strong>Email:</strong> {user?.email || 'Not set'}</p>
+              <p><strong>Phone:</strong> {user?.contactNumber || 'Not set'}</p>
+            </div>
+
+            <div className="profile-section">
+              <h3>Personal Information</h3>
+              <p><strong>Full Name:</strong> {user?.name || 'Not set'}</p>
+              <p><strong>Nationality:</strong> {user?.parentNationality || 'Not set'}</p>
+              <p><strong>Passport Number:</strong> {user?.parentPassportNumber || 'Not set'}</p>
+              <p><strong>Passport Expiry:</strong> {user?.parentPassportExpiryDate ? new Date(user.parentPassportExpiryDate).toLocaleDateString() : 'Not set'}</p>
+              <p><strong>NIF Number:</strong> {user?.parentNifNumber || 'Not set'}</p>
+            </div>
+
+            <div className="profile-section">
+              <h3>Address</h3>
+              <p><strong>Street Address:</strong> {user?.parentStreetAddress || 'Not set'}</p>
+              <p><strong>City:</strong> {user?.parentCity || 'Not set'}</p>
+              <p><strong>Postal Code:</strong> {user?.parentPostalCode || 'Not set'}</p>
+              <p><strong>Country:</strong> {user?.parentCountry || 'Not set'}</p>
+            </div>
+
+            <div className="profile-section">
+              <h3>Emergency Contact</h3>
+              <p><strong>Relationship:</strong> {user?.emergencyContactRelationship || 'Not set'}</p>
+              <p><strong>Name:</strong> {user?.emergencyContactName || 'Not set'}</p>
+              <p><strong>Phone Number:</strong> {user?.emergencyContactNumber || 'Not set'}</p>
+            </div>
           </div>
+          <div className="profile-actions">
+              <button onClick={handleEditStart}>Edit Profile</button>
+            </div>
+            </>
         ) : (
           <form onSubmit={handleSave}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label>Name:</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={{ marginLeft: '0.5rem', padding: '0.25rem' }}
-              />
+            <div className="profile-grid">
+              <div className="profile-section">
+                <h3>Login Information</h3>
+                <p className="profile-field"><strong>Username:</strong> {user?.username}</p>
+                <p className="profile-field">
+                  <strong>Password:</strong>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Leave blank to keep current password"
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field"><strong>Role:</strong> {user?.role}</p>
+                <p className="profile-field">
+                  <strong>Email:</strong>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>Phone:</strong>
+                  <input
+                    type="tel"
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+              </div>
+
+              <div className="profile-section">
+                <h3>Personal Information</h3>
+                <p className="profile-field">
+                  <strong>Full Name:</strong>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>Nationality:</strong>
+                  <input
+                    type="text"
+                    value={parentNationality}
+                    onChange={(e) => setParentNationality(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>Passport Number:</strong>
+                  <input
+                    type="text"
+                    value={parentPassportNumber}
+                    onChange={(e) => setParentPassportNumber(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>Passport Expiry:</strong>
+                  <input
+                    type="date"
+                    value={parentPassportExpiryDate}
+                    onChange={(e) => setParentPassportExpiryDate(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>NIF Number:</strong>
+                  <input
+                    type="text"
+                    value={parentNifNumber}
+                    onChange={(e) => setParentNifNumber(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+              </div>
+
+              <div className="profile-section">
+                <h3>Address</h3>
+                <p className="profile-field">
+                  <strong>Street Address:</strong>
+                  <input
+                    type="text"
+                    value={parentStreetAddress}
+                    onChange={(e) => setParentStreetAddress(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>City:</strong>
+                  <input
+                    type="text"
+                    value={parentCity}
+                    onChange={(e) => setParentCity(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>Postal Code:</strong>
+                  <input
+                    type="text"
+                    value={parentPostalCode}
+                    onChange={(e) => setParentPostalCode(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>Country:</strong>
+                  <input
+                    type="text"
+                    value={parentCountry}
+                    onChange={(e) => setParentCountry(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+              </div>
+
+              <div className="profile-section">
+                <h3>Emergency Contact</h3>
+                <p className="profile-field">
+                  <strong>Relationship:</strong>
+                  <input
+                    type="text"
+                    value={emergencyContactRelationship}
+                    onChange={(e) => setEmergencyContactRelationship(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>Name:</strong>
+                  <input
+                    type="text"
+                    value={emergencyContactName}
+                    onChange={(e) => setEmergencyContactName(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+                <p className="profile-field">
+                  <strong>Phone Number:</strong>
+                  <input
+                    type="tel"
+                    value={emergencyContactNumber}
+                    onChange={(e) => setEmergencyContactNumber(e.target.value)}
+                    className="profile-input"
+                  />
+                </p>
+              </div>
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label>Email:</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{ marginLeft: '0.5rem', padding: '0.25rem' }}
-              />
-            </div>
-            <div style={{ gap: '0.5rem', display: 'flex' }}>
+
+            <div className="profile-actions">
               <button type="submit">Save</button>
               <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
             </div>

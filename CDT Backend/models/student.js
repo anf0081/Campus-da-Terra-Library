@@ -24,7 +24,8 @@ const studentSchema = mongoose.Schema({
   },
   gender: {
     type: String,
-    enum: ['Male', 'Female', 'Other']
+    enum: ['Male', 'Female', 'Other'],
+    default: 'Other'
   },
   dateOfBirth: {
     type: Date,
@@ -65,15 +66,18 @@ const studentSchema = mongoose.Schema({
   // Academic Background
   primarySchoolStage: {
     type: String,
-    enum: ['Learn to Read and Write', 'Ages 6-7', 'Ages 7-8', 'Ages 8-9', 'Ages 9-10', 'Ages 10-11', 'Ages 11-12']
+    enum: ['Learn to Read and Write', 'Ages 6-7', 'Ages 7-8', 'Ages 8-9', 'Ages 9-10', 'Ages 10-11', 'Ages 11-12', 'Other'],
+    default: 'Other'
   },
   enrollmentLength: {
     type: String,
-    enum: ['6 months (Residents)', '1 year (Residents)', 'Multiple years (Residents)', '1 month (Traveling family)', '2 months (Traveling Family)', '3 months (Traveling Family)']
+    enum: ['6 months (Residents)', '1 year (Residents)', 'Multiple years (Residents)', '1 month (Traveling family)', '2 months (Traveling Family)', '3 months (Traveling Family)'],
+    default: '1 year (Residents)'
   },
   weekdayAttendance: {
     type: String,
-    enum: ['1 day/week', '2 days/week', '3 days/week', '4 days/week', '5 days/week']
+    enum: ['1 day/week', '2 days/week', '3 days/week', '4 days/week', '5 days/week'],
+    default: '5 days/week'
   },
   enrollmentStartDate: Date,
   siblings: Boolean,
@@ -84,15 +88,18 @@ const studentSchema = mongoose.Schema({
   firstLanguage: String,
   englishProficiency: {
     type: String,
-    enum: ['No prior knowledge', 'Beginner', 'Intermediate', 'Proficient', 'Fluent']
+    enum: ['No prior knowledge', 'Beginner', 'Intermediate', 'Proficient', 'Fluent'],
+    default: 'No prior knowledge'
   },
   englishReadingWriting: {
     type: String,
-    enum: ['No prior knowledge', 'Beginner', 'Intermediate', 'Advanced']
+    enum: ['No prior knowledge', 'Beginner', 'Intermediate', 'Advanced'],
+    default: 'No prior knowledge'
   },
   portugueseLevel: {
     type: String,
-    enum: ['No prior knowledge', 'Beginner', 'Intermediate', 'Proficient', 'Fluent']
+    enum: ['No prior knowledge', 'Beginner', 'Intermediate', 'Proficient', 'Fluent'],
+    default: 'No prior knowledge'
   },
   skillsHobbies: String,
   strugglingSubjects: String,
@@ -100,11 +107,13 @@ const studentSchema = mongoose.Schema({
   // Educational Approach & Curriculum (your custom additions)
   approach: {
     type: String,
-    enum: ['Unschooling', 'Core Education', 'Qualifications for higher education']
+    enum: ['Unschooling', 'Core Education', 'Qualifications for higher education', 'Other'],
+    default: 'Other'
   },
   curriculum: {
     type: String,
-    enum: ['Online School', 'Workbook Curriculum', 'Mix and Match']
+    enum: ['Online School', 'Workbook Curriculum', 'Mix and Match', 'Other'],
+    default: 'Other'
   },
   curriculumSupplier: String,
   curriculumNotes: String,
@@ -231,7 +240,9 @@ studentSchema.pre('save', function(next) {
 
 studentSchema.set('toJSON', {
   transform: (document, returnedObject) => {
-    returnedObject.id = returnedObject._id.toString()
+    if (returnedObject._id) {
+      returnedObject.id = returnedObject._id.toString()
+    }
     delete returnedObject._id
     delete returnedObject.__v
   }

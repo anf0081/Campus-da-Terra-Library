@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import LoginForm from './LoginForm'
 
 const Header = ({
@@ -12,19 +12,30 @@ const Header = ({
   handleLogout
 }) => {
   const [loginVisible, setLoginVisible] = useState(false)
+  const navigate = useNavigate()
+
+  const handleLogoutClick = () => {
+    handleLogout()
+    navigate('/')
+  }
 
   return (
     <header className="header">
       <div className="header-logo">
-        <img src="./public/CDT_Logo_terra.svg" alt="Campus da Terra Library" />
+        <Link to="/">
+          <img src="./CDT_Logo_terra.svg" alt="Campus da Terra Library" />
+        </Link>
       </div>
       <nav className="header-nav">
-        {user && (
-          <div className="nav-links">
-            <Link to="/" className="nav-link">Library</Link>
+        <div className="nav-links">
+          <Link to="/" className="nav-link">Library</Link>
+          {user && (
             <Link to="/students" className="nav-link">Students</Link>
-          </div>
-        )}
+          )}
+          {user?.role === 'admin' && (
+            <Link to="/users" className="nav-link">Users</Link>
+          )}
+        </div>
       </nav>
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {!user ? (
@@ -46,7 +57,7 @@ const Header = ({
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
             <Link className="nav-link profile" to="/profile" style={{ textDecoration: 'none', color: 'inherit' }}>{user.name}</Link>
-            <button onClick={handleLogout}>Logout</button>
+            <button onClick={handleLogoutClick}>Logout</button>
           </div>
         )}
       </div>

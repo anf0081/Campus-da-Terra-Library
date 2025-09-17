@@ -3,8 +3,27 @@ const Book = require('../models/book')
 const { userExtractor } = require('../utils/middleware')
 
 booksRouter.get('/', async (request, response) => {
-  const books = await Book.find({}).populate('user', { username: 1, name: 1 })
-  response.json(books)
+  try {
+    const books = await Book.find({})
+      .populate('user', { username: 1, name: 1 })
+      .populate('lending.borrower', { username: 1, name: 1 })
+
+    // Manually populate lendingHistory borrowers
+    const User = require('../models/user')
+    for (let book of books) {
+      for (let historyEntry of book.lendingHistory) {
+        if (historyEntry.borrower) {
+          const borrowerUser = await User.findById(historyEntry.borrower).select('username name')
+          historyEntry.borrower = borrowerUser
+        }
+      }
+    }
+
+    response.json(books)
+  } catch (error) {
+    console.error('Error fetching books:', error)
+    response.status(500).json({ error: 'internal server error' })
+  }
 })
 
 
@@ -13,14 +32,14 @@ booksRouter.post('/', userExtractor, async (request, response) => {
     return response.status(403).json({ error: 'only admins and tutors can add books' })
   }
   const body = request.body
-  if (!body.title || !body.url) {
-    return response.status(400).json({ error: 'title and url are required' })
+  if (!body.title) {
+    return response.status(400).json({ error: 'title is required' })
   }
 
   const book = new Book({
     title: body.title,
     author: body.author || 'Unknown Author',
-    url: body.url,
+    url: body.url || '',
     likes: body.likes || 0,
     user: request.user._id
   })
@@ -50,16 +69,43 @@ booksRouter.delete('/:id', userExtractor, async (request, response) => {
   }
 })
 
-booksRouter.put('/:id', async (request, response) => {
-  const { likes } = request.body
+booksRouter.put('/:id', userExtractor, async (request, response) => {
+  const { likes, title, author, url } = request.body
 
   const updateBook = await Book.findById(request.params.id)
   if (!updateBook) {
     return response.status(404).end()
   }
-  updateBook.likes = likes
+
+  // If only likes is being updated (for the like functionality)
+  if (likes !== undefined && !title && !author && !url) {
+    updateBook.likes = likes
+  } else {
+    // Admin updating book details
+    if (!request.user || request.user.role !== 'admin') {
+      return response.status(403).json({ error: 'only admins can edit book details' })
+    }
+
+    if (title !== undefined) updateBook.title = title
+    if (author !== undefined) updateBook.author = author || 'Unknown Author'
+    if (url !== undefined) updateBook.url = url
+  }
 
   const savedBook = await updateBook.save()
+
+  // Populate the book after saving
+  await savedBook.populate('user', { username: 1, name: 1 })
+  await savedBook.populate('lending.borrower', { username: 1, name: 1 })
+
+  // Manually populate lendingHistory borrowers
+  const User = require('../models/user')
+  for (let historyEntry of savedBook.lendingHistory) {
+    if (historyEntry.borrower) {
+      const borrowerUser = await User.findById(historyEntry.borrower).select('username name')
+      historyEntry.borrower = borrowerUser
+    }
+  }
+
   response.json(savedBook)
 })
 
@@ -103,6 +149,16 @@ booksRouter.put('/:id/lend', userExtractor, async (request, response) => {
   })
 
   const savedBook = await book.save()
+
+  // Manually populate lendingHistory borrowers for the response
+  const User = require('../models/user')
+  for (let historyEntry of savedBook.lendingHistory) {
+    if (historyEntry.borrower) {
+      const borrowerUser = await User.findById(historyEntry.borrower).select('username name')
+      historyEntry.borrower = borrowerUser
+    }
+  }
+
   response.json(savedBook)
 })
 
@@ -116,6 +172,11 @@ booksRouter.put('/:id/return', userExtractor, async (request, response) => {
     return response.status(400).json({ error: 'book is not currently lent out' })
   }
 
+  // Check if borrower exists
+  if (!book.lending.borrower) {
+    return response.status(400).json({ error: 'book lending data is corrupted - no borrower found' })
+  }
+
   // Allow borrower or admin to return
   const isBorrower = book.lending.borrower.toString() === request.user._id.toString()
   const isAdmin = request.user.role === 'admin'
@@ -124,9 +185,12 @@ booksRouter.put('/:id/return', userExtractor, async (request, response) => {
     return response.status(403).json({ error: 'unauthorized: only the borrower or an admin can return this book' })
   }
 
+  // Save the borrower ID before clearing the lending status
+  const borrowerId = book.lending.borrower
+
   // Find the current lending entry in history and mark it as returned
   const currentHistoryEntry = book.lendingHistory.find(
-    entry => entry.borrower.toString() === request.user._id.toString() && !entry.isReturned
+    entry => entry.borrower.toString() === borrowerId.toString() && !entry.isReturned
   )
 
   if (currentHistoryEntry) {
@@ -140,6 +204,34 @@ booksRouter.put('/:id/return', userExtractor, async (request, response) => {
     lentDate: null,
     dueDate: null
   }
+
+  const savedBook = await book.save()
+
+  // Manually populate lendingHistory borrowers for the response
+  const User = require('../models/user')
+  for (let historyEntry of savedBook.lendingHistory) {
+    if (historyEntry.borrower) {
+      const borrowerUser = await User.findById(historyEntry.borrower).select('username name')
+      historyEntry.borrower = borrowerUser
+    }
+  }
+
+  response.json(savedBook)
+})
+
+booksRouter.put('/:id/clear-history', userExtractor, async (request, response) => {
+  const book = await Book.findById(request.params.id)
+  if (!book) {
+    return response.status(404).json({ error: 'book not found' })
+  }
+
+  // Only admins can clear history
+  if (!request.user || request.user.role !== 'admin') {
+    return response.status(403).json({ error: 'only admins can clear borrowing history' })
+  }
+
+  // Clear the lending history
+  book.lendingHistory = []
 
   const savedBook = await book.save()
   response.json(savedBook)
