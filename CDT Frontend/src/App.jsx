@@ -18,6 +18,7 @@ const App = () => {
   const [user, setUser] = useState(null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [message, setMessage] = useState(null)
   const [className, setClassName] = useState('error')
 
@@ -41,7 +42,6 @@ const App = () => {
   }, [handleLogout])
 
   useEffect(() => {
-    // Set up automatic logout callback for expired tokens
     setOnTokenExpiredCallback(handleTokenExpired)
 
     const loggedUserJSON = window.localStorage.getItem('loggedlibraryUser')
@@ -60,11 +60,11 @@ const App = () => {
   const handleLogin = async event => {
     event.preventDefault()
     try {
-      const user = await loginService.login({ username, password })
+      const user = await loginService.login({ username, password, rememberMe })
       window.localStorage.setItem(
         'loggedlibraryUser', JSON.stringify(user)
-      ) 
-      
+      )
+
       bookService.setToken(user.token)
       userService.setToken(user.token)
       studentService.setToken(user.token)
@@ -72,6 +72,7 @@ const App = () => {
       setUser(user)
       setUsername('')
       setPassword('')
+      setRememberMe(false)
       setMessage('Login successful')
       setClassName('success')
       setTimeout(() => {
@@ -99,6 +100,8 @@ const App = () => {
           setUsername={setUsername}
           password={password}
           setPassword={setPassword}
+          rememberMe={rememberMe}
+          setRememberMe={setRememberMe}
           handleLogout={handleLogout}
         />
         <Notification message={message} type={className} />

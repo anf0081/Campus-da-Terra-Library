@@ -5,13 +5,14 @@ import studentService from '../services/students'
 import StudentCard from './StudentCard'
 import UserCard from './UserCard'
 
-const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
+const Users = ({ user, setMessage, setClassName }) => {
   const navigate = useNavigate()
   const [users, setUsers] = useState([])
   const [selectedUser, setSelectedUser] = useState(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(true)
+  const isAdmin = user?.role === 'admin'
 
   // Form state for editing user
   const [formData, setFormData] = useState({
@@ -41,30 +42,20 @@ const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
     emergencyContactNumber: '',
   })
 
-  const handleTokenExpiration = useCallback((error) => {
-      if (error.response?.status === 401 &&
-          (error.response?.data?.error === 'token expired' ||
-           error.response?.data?.error === 'token invalid')) {
-        onTokenExpired()
-        return true
-      }
-      return false
-    }, [onTokenExpired])
   
     const fetchUsers = useCallback( async () => {
       try {
         setLoading(true)
         const userList = await userService.getAll()
         setUsers(userList)
-      } catch (error) {
-        if (handleTokenExpiration(error)) return
+      } catch {
         setMessage('Error fetching users')
         setClassName('error')
         setTimeout(() => setMessage(null), 5000)
       } finally {
         setLoading(false)
       }
-    }, [handleTokenExpiration, setMessage, setClassName])
+    }, [setMessage, setClassName])
   
     useEffect(() => {
       if (user?.token) {
@@ -140,7 +131,6 @@ const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
           setClassName('error')
         }, 5000)
       } catch (error) {
-        if (handleTokenExpiration(error)) return
         const backendMsg = error.response?.data?.error
         setMessage(backendMsg || 'Error saving user')
         setClassName('error')
@@ -198,8 +188,7 @@ const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
         setMessage(null)
         setClassName('error')
       }, 5000)
-    } catch (error) {
-      if (handleTokenExpiration(error)) return
+    } catch {
       setMessage('Error deleting user')
       setClassName('error')
       setTimeout(() => setMessage(null), 5000)
@@ -277,8 +266,7 @@ const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
         setMessage(null)
         setClassName('error')
       }, 5000)
-    } catch (error) {
-      if (handleTokenExpiration(error)) return
+    } catch {
       setMessage('Error deleting student')
       setClassName('error')
       setTimeout(() => setMessage(null), 5000)
@@ -304,9 +292,9 @@ const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
 
       {!isCreating && !isEditing && !selectedUser ? (
         <div className="users-container">
-        <div className="users-actions">
-            <button onClick={handleCreateStart}>Add New User</button>
-        </div>
+        {isAdmin && <div className="users-actions">
+            <button className="outlined" onClick={handleCreateStart}>Add New User</button>
+        </div>}
 
             {users.length === 0 ? (
               <p>No users found.</p>
@@ -522,7 +510,7 @@ const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
       ) : (
         <div className="user-detail-container">
           <div className="user-actions">
-            <button onClick={() => {
+            <button className="outlined" onClick={() => {
               setSelectedUser(null);
               setIsEditing(false);
               setIsCreating(false);
@@ -530,13 +518,12 @@ const Users = ({ user, setMessage, setClassName, onTokenExpired }) => {
             ← Back to Users List
           </button>
           {!isEditing && !isCreating && selectedUser.id && (
-            <button onClick={() => handleEditStart(selectedUser)}>Edit User</button>
+            <button className="outlined" onClick={() => handleEditStart(selectedUser)}>Edit User</button>
           )}
           </div>
 
           {(!isEditing && !isCreating) ? (
             <div className="user-detail">
-              <h3>{selectedUser.name || selectedUser.username}</h3>
 
               <div className="detail-sections">
                 <div className="detail-section">

@@ -4,17 +4,23 @@ const BookForm = ({ createBook }) => {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [url, setUrl] = useState('')
+  const [language, setLanguage] = useState('')
+  const [difficulty, setDifficulty] = useState('')
 
   const handleSubmit = (event) => {
     event.preventDefault()
     createBook({
       title,
       author,
-      url
+      url,
+      language,
+      difficulty
     })
     setTitle('')
     setAuthor('')
     setUrl('')
+    setLanguage('')
+    setDifficulty('')
   }
 
   return (
@@ -47,6 +53,30 @@ const BookForm = ({ createBook }) => {
           value={url}
           onChange={({ target }) => setUrl(target.value)}
         />
+      </div>
+      <div className="form-group">
+        <label htmlFor="create-book-language">Language:</label>
+        <input
+          id="create-book-language"
+          type="text"
+          value={language}
+          onChange={({ target }) => setLanguage(target.value)}
+          placeholder="e.g., English, Portuguese, Spanish"
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="create-book-difficulty">Reading Difficulty:</label>
+        <select
+          id="create-book-difficulty"
+          value={difficulty}
+          onChange={({ target }) => setDifficulty(target.value)}
+        >
+          <option value="">Select difficulty level...</option>
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+          <option value="Expert">Expert</option>
+        </select>
       </div>
       <div className="form-actions">
         <button type="submit">Create Book</button>

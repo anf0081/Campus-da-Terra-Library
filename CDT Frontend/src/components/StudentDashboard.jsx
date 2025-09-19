@@ -14,7 +14,7 @@ const StudentDashboard = ({ user, setMessage, setClassName }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-    const isAdmin = user && user.role === 'admin'
+    const isAdmin = user?.role === 'admin'
 
    const fetchStudent = useCallback( async () => {
       try {
@@ -83,14 +83,16 @@ const StudentDashboard = ({ user, setMessage, setClassName }) => {
   }
 
   if (loading) {
-    return <div className="dashboard-container"><div className="loading">Loading dashboard...</div></div>
+    return <div className="dashboard-container"><div className="flex flex-col items-center justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div><p className="mt-4">Loading dashboard...</p></div></div>
   }
 
   if (error) {
     return (
       <div className="dashboard-container">
-        <div className="error-message">{error}</div>
-        <button onClick={() => navigate(-1)}>Go Back</button>
+        <div className="text-error text-center py-8">{error}</div>
+        <div className="text-center">
+          <button className="btn-terra" onClick={() => navigate(-1)}>Go Back</button>
+        </div>
       </div>
     )
   }
@@ -104,15 +106,22 @@ const StudentDashboard = ({ user, setMessage, setClassName }) => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <h1>Student Dashboard - {studentName}</h1>
-        {isAdmin && <span className="admin-badge">Admin View</span>}
+        <h1>Dashboard - {studentName}</h1>
+        <div className="flex items-center gap-4">
+            <button className="outlined" onClick={() => navigate('/students')}>← Back to Student List</button>
+            <button
+              onClick={() => navigate('/students', { state: { selectedStudent: student, mode: 'view' } })}
+              className="btn-terra outlined"
+            >
+              View Student Data
+            </button>
+        </div>
       </div>
-
 
         <div className="dashboard-content">
         <PortfolioSection
           studentId={studentId}
-          portfolio={dashboard.portfolio}
+          portfolios={dashboard.portfolios}
           isAdmin={isAdmin}
           onUpdate={updateDashboard}
           showMessage={showMessage}

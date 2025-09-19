@@ -9,6 +9,8 @@ const Header = ({
   setUsername,
   password,
   setPassword,
+  rememberMe,
+  setRememberMe,
   handleLogout
 }) => {
   const [loginVisible, setLoginVisible] = useState(false)
@@ -37,7 +39,7 @@ const Header = ({
           )}
         </div>
       </nav>
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div className="ml-auto flex items-center gap-4">
         {!user ? (
           <>
             <button onClick={() => setLoginVisible(v => !v)}>Login</button>
@@ -49,14 +51,16 @@ const Header = ({
   setUsername={setUsername}
   password={password}
   setPassword={setPassword}
+  rememberMe={rememberMe}
+  setRememberMe={setRememberMe}
   onCancel={() => setLoginVisible(false)}
     />
   </div>
 )}
           </>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
-            <Link className="nav-link profile" to="/profile" style={{ textDecoration: 'none', color: 'inherit' }}>{user.name}</Link>
+          <div className="flex items-center gap-3">
+            <button className="outlined" onClick={() => navigate('/profile')}>{user.name}</button>
             <button onClick={handleLogoutClick}>Logout</button>
           </div>
         )}

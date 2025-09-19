@@ -65,7 +65,7 @@ dashboardsRouter.get('/:studentId', userExtractor, async (request, response) => 
     if (!dashboard) {
       dashboard = new Dashboard({
         studentId,
-        portfolio: {},
+        portfolios: [],
         documents: [],
         history: []
       })
@@ -108,7 +108,7 @@ dashboardsRouter.put('/:studentId', userExtractor, async (request, response) => 
 })
 
 // Upload portfolio PDF (admin only)
-dashboardsRouter.post('/:studentId/portfolio', userExtractor, upload.single('portfolio'), async (request, response) => {
+dashboardsRouter.post('/:studentId/portfolios', userExtractor, upload.single('portfolio'), async (request, response) => {
   try {
     if (request.user.role !== 'admin') {
       return response.status(403).json({ error: 'Only admins can upload portfolio' })
@@ -123,18 +123,112 @@ dashboardsRouter.post('/:studentId/portfolio', userExtractor, upload.single('por
 
     let dashboard = await Dashboard.findOne({ studentId })
     if (!dashboard) {
-      dashboard = new Dashboard({ studentId })
+      dashboard = new Dashboard({
+        studentId,
+        portfolios: [],
+        documents: [],
+        history: []
+      })
     }
 
-    // Remove old portfolio file if exists
-    if (dashboard.portfolio.pdfUrl) {
-      const oldFilePath = path.join(__dirname, '..', dashboard.portfolio.pdfUrl)
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath)
-      }
+    // Add new portfolio to the array
+    const newPortfolio = {
+      pdfUrl: fileUrl,
+      fileName: request.file.originalname,
+      uploadDate: new Date()
     }
 
-    dashboard.portfolio = {
+    dashboard.portfolios.push(newPortfolio)
+
+    await dashboard.save()
+    await dashboard.populate('studentId', 'firstName lastName')
+
+    response.json(dashboard)
+  } catch (error) {
+    console.error('Error uploading portfolio:', error)
+    response.status(500).json({ error: 'Failed to upload portfolio' })
+  }
+})
+
+// Delete specific portfolio (admin only)
+dashboardsRouter.delete('/:studentId/portfolios/:portfolioId', userExtractor, async (request, response) => {
+  try {
+    if (request.user.role !== 'admin') {
+      return response.status(403).json({ error: 'Only admins can delete portfolio' })
+    }
+
+    const studentId = request.params.studentId
+    const portfolioId = request.params.portfolioId
+    const dashboard = await Dashboard.findOne({ studentId })
+
+    if (!dashboard) {
+      return response.status(404).json({ error: 'Dashboard not found' })
+    }
+
+    const portfolioIndex = dashboard.portfolios.findIndex(portfolio => portfolio._id.toString() === portfolioId)
+
+    if (portfolioIndex === -1) {
+      return response.status(404).json({ error: 'Portfolio not found' })
+    }
+
+    const portfolio = dashboard.portfolios[portfolioIndex]
+
+    // Remove portfolio file from filesystem
+    const filePath = path.join(__dirname, '..', portfolio.pdfUrl)
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+    }
+
+    // Remove portfolio from array
+    dashboard.portfolios.splice(portfolioIndex, 1)
+    await dashboard.save()
+    await dashboard.populate('studentId', 'firstName lastName')
+
+    response.json(dashboard)
+  } catch (error) {
+    console.error('Error deleting portfolio:', error)
+    response.status(500).json({ error: 'Failed to delete portfolio' })
+  }
+})
+
+// Replace specific portfolio (admin only)
+dashboardsRouter.put('/:studentId/portfolios/:portfolioId', userExtractor, upload.single('portfolio'), async (request, response) => {
+  try {
+    if (request.user.role !== 'admin') {
+      return response.status(403).json({ error: 'Only admins can replace portfolio' })
+    }
+
+    if (!request.file) {
+      return response.status(400).json({ error: 'No file uploaded' })
+    }
+
+    const studentId = request.params.studentId
+    const portfolioId = request.params.portfolioId
+    const fileUrl = `/uploads/${request.file.filename}`
+
+    const dashboard = await Dashboard.findOne({ studentId })
+
+    if (!dashboard) {
+      return response.status(404).json({ error: 'Dashboard not found' })
+    }
+
+    const portfolioIndex = dashboard.portfolios.findIndex(portfolio => portfolio._id.toString() === portfolioId)
+
+    if (portfolioIndex === -1) {
+      return response.status(404).json({ error: 'Portfolio not found' })
+    }
+
+    const oldPortfolio = dashboard.portfolios[portfolioIndex]
+
+    // Remove old portfolio file from filesystem
+    const oldFilePath = path.join(__dirname, '..', oldPortfolio.pdfUrl)
+    if (fs.existsSync(oldFilePath)) {
+      fs.unlinkSync(oldFilePath)
+    }
+
+    // Update portfolio data
+    dashboard.portfolios[portfolioIndex] = {
+      _id: oldPortfolio._id,
       pdfUrl: fileUrl,
       fileName: request.file.originalname,
       uploadDate: new Date()
@@ -145,8 +239,8 @@ dashboardsRouter.post('/:studentId/portfolio', userExtractor, upload.single('por
 
     response.json(dashboard)
   } catch (error) {
-    console.error('Error uploading portfolio:', error)
-    response.status(500).json({ error: 'Failed to upload portfolio' })
+    console.error('Error replacing portfolio:', error)
+    response.status(500).json({ error: 'Failed to replace portfolio' })
   }
 })
 
@@ -291,6 +385,99 @@ dashboardsRouter.delete('/:studentId/history/:historyId', userExtractor, async (
   } catch (error) {
     console.error('Error removing history event:', error)
     response.status(500).json({ error: 'Failed to remove history event' })
+  }
+})
+
+// Upload invoice file (admin only)
+dashboardsRouter.post('/:studentId/history/:historyId/receipt', userExtractor, upload.single('receiptFile'), async (request, response) => {
+  try {
+    if (request.user.role !== 'admin') {
+      return response.status(403).json({ error: 'Only admins can upload invoices' })
+    }
+
+    if (!request.file) {
+      return response.status(400).json({ error: 'Invoice file is required' })
+    }
+
+    const { studentId, historyId } = request.params
+    const fileUrl = `/uploads/${request.file.filename}`
+
+    const dashboard = await Dashboard.findOne({ studentId })
+    if (!dashboard) {
+      return response.status(404).json({ error: 'Dashboard not found' })
+    }
+
+    const historyEvent = dashboard.history.id(historyId)
+    if (!historyEvent) {
+      return response.status(404).json({ error: 'History event not found' })
+    }
+
+    if (historyEvent.type !== 'receipt') {
+      return response.status(400).json({ error: 'Can only upload invoices for receipt events' })
+    }
+
+    // Remove old file if it exists
+    if (historyEvent.downloadUrl) {
+      const oldFilePath = path.join('uploads', path.basename(historyEvent.downloadUrl))
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath)
+      }
+    }
+
+    // Update the history event with the file URL
+    historyEvent.downloadUrl = fileUrl
+    historyEvent.fileName = request.file.originalname
+
+    await dashboard.save()
+    await dashboard.populate('studentId', 'firstName lastName')
+
+    response.json(dashboard)
+  } catch (error) {
+    console.error('Error uploading invoice:', error)
+    response.status(500).json({ error: 'Failed to upload invoice' })
+  }
+})
+
+// Delete invoice file (admin only)
+dashboardsRouter.delete('/:studentId/history/:historyId/receipt', userExtractor, async (request, response) => {
+  try {
+    if (request.user.role !== 'admin') {
+      return response.status(403).json({ error: 'Only admins can delete invoices' })
+    }
+
+    const { studentId, historyId } = request.params
+
+    const dashboard = await Dashboard.findOne({ studentId })
+    if (!dashboard) {
+      return response.status(404).json({ error: 'Dashboard not found' })
+    }
+
+    const historyEvent = dashboard.history.id(historyId)
+    if (!historyEvent) {
+      return response.status(404).json({ error: 'History event not found' })
+    }
+
+    if (!historyEvent.downloadUrl) {
+      return response.status(400).json({ error: 'No invoice file to delete' })
+    }
+
+    // Remove file from filesystem
+    const filePath = path.join('uploads', path.basename(historyEvent.downloadUrl))
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+    }
+
+    // Remove the file URL from the history event
+    historyEvent.downloadUrl = undefined
+    historyEvent.fileName = undefined
+
+    await dashboard.save()
+    await dashboard.populate('studentId', 'firstName lastName')
+
+    response.json(dashboard)
+  } catch (error) {
+    console.error('Error deleting invoice:', error)
+    response.status(500).json({ error: 'Failed to delete invoice' })
   }
 })
 

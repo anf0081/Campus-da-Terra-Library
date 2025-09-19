@@ -84,56 +84,72 @@ booksRouter.delete('/:id', userExtractor, async (request, response) => {
 })
 
 booksRouter.put('/:id', userExtractor, async (request, response) => {
-  const { likes, title, author, url } = request.body
+  try {
+    const { likes, title, author, url, language, difficulty } = request.body || {}
 
-  const updateBook = await Book.findById(request.params.id)
-  if (!updateBook) {
-    return response.status(404).end()
-  }
-
-  // If only likes is being updated (for the like functionality)
-  if (likes !== undefined && !title && !author && !url) {
-    updateBook.likes = likes
-  } else {
-    // Admin updating book details
-    if (!request.user || (request.user.role !== 'admin' && request.user.role !== 'tutor')) {
-      return response.status(403).json({ error: 'only admins and tutors can update books' })
+    const updateBook = await Book.findById(request.params.id)
+    if (!updateBook) {
+      return response.status(404).end()
     }
 
+    // If only likes is being updated (for the like functionality)
+    if (likes !== undefined && !title && !author && !url && !language && !difficulty) {
+      updateBook.likes = likes
+    } else {
+      // Admin updating book details
+      if (!request.user || (request.user.role !== 'admin' && request.user.role !== 'tutor')) {
+        return response.status(403).json({ error: 'only admins and tutors can update books' })
+      }
 
-    if (title !== undefined) updateBook.title = title
-    if (author !== undefined) updateBook.author = author || 'Unknown Author'
-    if (url !== undefined) updateBook.url = url
-  }
-
-  const savedBook = await updateBook.save()
-
-  // Populate the book after saving
-  await savedBook.populate('user', { username: 1, name: 1 })
-  await savedBook.populate('lending.borrower', { username: 1, name: 1 })
-
-  // Manually populate lendingHistory borrowers
-  const User = require('../models/user')
-  for (let historyEntry of savedBook.lendingHistory) {
-    if (historyEntry.borrower) {
-      const borrowerUser = await User.findById(historyEntry.borrower).select('username name')
-      historyEntry.borrower = borrowerUser
+      if (title !== undefined) updateBook.title = title
+      if (author !== undefined) updateBook.author = author || 'Unknown Author'
+      if (url !== undefined) updateBook.url = url
+      if (language !== undefined) updateBook.language = language || ''
+      if (difficulty !== undefined) {
+        updateBook.difficulty = difficulty === '' ? undefined : difficulty
+      }
     }
-  }
 
-  response.json(savedBook)
+    const savedBook = await updateBook.save()
+
+    // Populate the book after saving
+    await savedBook.populate('user', { username: 1, name: 1 })
+    await savedBook.populate('lending.borrower', { username: 1, name: 1 })
+
+    // Manually populate lendingHistory borrowers
+    const User = require('../models/user')
+    for (let historyEntry of savedBook.lendingHistory) {
+      if (historyEntry.borrower) {
+        const borrowerUser = await User.findById(historyEntry.borrower).select('username name')
+        historyEntry.borrower = borrowerUser
+      }
+    }
+
+    response.json(savedBook)
+  } catch (error) {
+    console.error('Error updating book:', error)
+    response.status(500).json({ error: 'Failed to update book', details: error.message })
+  }
 })
 
 booksRouter.put('/:id/lend', userExtractor, async (request, response) => {
+  const { userId } = request.body // For admin lending to specific user
+  const isAdmin = request.user.role === 'admin'
 
+  // Determine the borrower - if admin provides userId, use that, otherwise use requesting user
+  const borrowerId = (isAdmin && userId) ? userId : request.user._id
+
+  // If admin is lending to someone else, check their book limit instead
   const borrowedCount = await Book.countDocuments({
     'lending.isLent': true,
-    'lending.borrower': request.user._id
+    'lending.borrower': borrowerId
   })
 
   if (borrowedCount >= 3) {
-    return response.status(400).json({ error: 'You can only borrow up to 3 books at a time.' })
+    const borrowerText = (isAdmin && userId) ? 'This user' : 'You'
+    return response.status(400).json({ error: `${borrowerText} can only borrow up to 3 books at a time.` })
   }
+
   const book = await Book.findById(request.params.id)
   if (!book) {
     return response.status(404).json({ error: 'book not found' })
@@ -149,14 +165,14 @@ booksRouter.put('/:id/lend', userExtractor, async (request, response) => {
 
   book.lending = {
     isLent: true,
-    borrower: request.user._id,
+    borrower: borrowerId,
     lentDate: lentDate,
     dueDate: dueDate
   }
 
   // Add entry to lending history
   book.lendingHistory.push({
-    borrower: request.user._id,
+    borrower: borrowerId,
     lentDate: lentDate,
     dueDate: dueDate,
     returnedDate: null,

@@ -8,11 +8,20 @@ const dashboardSchema = mongoose.Schema({
     unique: true
   },
 
-  portfolio: {
-    pdfUrl: String,
-    fileName: String,
-    uploadDate: Date
-  },
+  portfolios: [{
+    pdfUrl: {
+      type: String,
+      required: true
+    },
+    fileName: {
+      type: String,
+      required: true
+    },
+    uploadDate: {
+      type: Date,
+      default: Date.now
+    }
+  }],
 
   documents: [{
     name: {

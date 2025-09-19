@@ -64,11 +64,6 @@ const studentSchema = mongoose.Schema({
   nifNumber: String,
 
   // Academic Background
-  primarySchoolStage: {
-    type: String,
-    enum: ['Learn to Read and Write', 'Ages 6-7', 'Ages 7-8', 'Ages 8-9', 'Ages 9-10', 'Ages 10-11', 'Ages 11-12', 'Other'],
-    default: 'Other'
-  },
   enrollmentLength: {
     type: String,
     enum: ['6 months (Residents)', '1 year (Residents)', 'Multiple years (Residents)', '1 month (Traveling family)', '2 months (Traveling Family)', '3 months (Traveling Family)'],
@@ -81,10 +76,6 @@ const studentSchema = mongoose.Schema({
   },
   enrollmentStartDate: Date,
   siblings: Boolean,
-  currentSchoolInPortugal: {
-    type: Boolean,
-    default: false
-  },
   firstLanguage: String,
   englishProficiency: {
     type: String,
@@ -162,7 +153,7 @@ const studentSchema = mongoose.Schema({
   // Pricing & Payment
   pricing: {
     type: String,
-    enum: ['Residents', 'Financial Hardship', 'Traveling Families'],
+    enum: ['Residents', 'Financial Hardship', 'Traveling Families', 'Founding Member'],
     default: 'Residents'
   },
   discount: {

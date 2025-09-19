@@ -13,13 +13,14 @@ const create = async newObject => {
   return response.data
 }
 
-const update = (id, newObject) => {
-  const request = apiClient.put(`/books/${id}`, newObject)
-  return request.then(response => response.data)
+const update = async (id, newObject) => {
+  const response = await apiClient.put(`/books/${id}`, newObject)
+  return response.data
 }
 
-const lend = async (id) => {
-  const response = await apiClient.put(`/books/${id}/lend`, {})
+const lend = async (id, userId = null) => {
+  const requestBody = userId ? { userId } : {}
+  const response = await apiClient.put(`/books/${id}/lend`, requestBody)
   return response.data
 }
 

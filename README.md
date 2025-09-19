@@ -1,6 +1,6 @@
-# Campus da Terra Library
+# Campus da Terra Management
 
-Campus da Terra Library is a full-stack web application for managing a school library, including book lending, user authentication, and admin features. The project is split into two parts:
+Campus da Terra Management is a full-stack web application for managing a small schooling hub with Parent (user) and student management, school library, including book lending, user authentication, and admin features. The project is split into two parts:
 
 - **CDT Backend**: Node.js, Express, MongoDB (Mongoose)
 - **CDT Frontend**: React (with Vite), Axios
@@ -12,6 +12,10 @@ Campus da Terra Library is a full-stack web application for managing a school li
 - Book management (add, update, delete, lend, return)
 - Lending history and due dates
 - Student and parent information management
+- Student Dashboard with Portfolio, Document Uploads, Payment History
+- General Dashboard, different for Users and Tutors
+- Google Calendar Integration with Event Sign Ups
+- Carpooling Function
 - Responsive, modern UI
 
 ## Getting Started
@@ -23,13 +27,7 @@ Campus da Terra Library is a full-stack web application for managing a school li
 
 ### Setup
 
-#### 1. Backend
-
-```sh
-cd "CDT Backend"
-cp .env.example .env   # create your .env file with MongoDB URI and SECRET
-npm install
-npm run dev            # or npm start for production
+...
 
 ## License
 

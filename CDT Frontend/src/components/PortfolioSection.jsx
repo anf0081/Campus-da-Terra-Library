@@ -4,10 +4,11 @@ import dashboardService from '../services/dashboards'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003'
 
-const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage }) => {
+const PortfolioSection = ({ studentId, portfolios = [], isAdmin, onUpdate, showMessage }) => {
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [mounted, setMounted] = useState(false) 
+  const [mounted, setMounted] = useState(false)
+  const [replacingPortfolioId, setReplacingPortfolioId] = useState(null) 
 
   useEffect(() => {
     setMounted(true)
@@ -15,7 +16,7 @@ const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage
 
   const handleFileUpload = async (event) => {
     event.preventDefault()
-    const file = event.target.portfolioFile?.files?.[0] 
+    const file = event.target.portfolioFile?.files?.[0]
 
     if (!file) {
       showMessage('Please select a file', 'error')
@@ -34,10 +35,19 @@ const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage
 
     try {
       setUploading(true)
-      const updatedDashboard = await dashboardService.uploadPortfolio(studentId, file)
+      let updatedDashboard
+
+      if (replacingPortfolioId) {
+        updatedDashboard = await dashboardService.replacePortfolio(studentId, replacingPortfolioId, file)
+        showMessage('Portfolio replaced successfully')
+      } else {
+        updatedDashboard = await dashboardService.uploadPortfolio(studentId, file)
+        showMessage('Portfolio uploaded successfully')
+      }
+
       onUpdate(updatedDashboard)
       setShowUploadForm(false)
-      showMessage('Portfolio uploaded successfully')
+      setReplacingPortfolioId(null)
     } catch (error) {
       console.error('Error uploading portfolio:', error)
       showMessage(error.response?.data?.error || 'Failed to upload portfolio', 'error')
@@ -46,7 +56,7 @@ const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = (portfolio) => {
     if (portfolio && portfolio.pdfUrl) {
       const link = document.createElement('a')
       link.href = `${API_URL}${portfolio.pdfUrl}`
@@ -57,87 +67,140 @@ const PortfolioSection = ({ studentId, portfolio, isAdmin, onUpdate, showMessage
     }
   }
 
+  const handleDelete = async (portfolio) => {
+    if (window.confirm('Are you sure you want to delete this portfolio? This action cannot be undone.')) {
+      try {
+        const updatedDashboard = await dashboardService.removePortfolio(studentId, portfolio.id || portfolio._id)
+        onUpdate(updatedDashboard)
+        showMessage('Portfolio deleted successfully')
+      } catch (error) {
+        console.error('Error deleting portfolio:', error)
+        showMessage(error.response?.data?.error || 'Failed to delete portfolio', 'error')
+      }
+    }
+  }
+
+  const handleReplace = (portfolio) => {
+    setReplacingPortfolioId(portfolio.id || portfolio._id)
+    setShowUploadForm(true)
+  }
+
   return (
     <div className="dashboard-section">
       <div className="section-header">
-        <h2>Portfolio</h2>
+        <h2>Portfolios</h2>
         {isAdmin && (
           <button
             className="section-action-btn"
             onClick={() => setShowUploadForm(true)}
             disabled={uploading}
           >
-            { portfolio?.pdfUrl ? 'Replace Portfolio' : 'Upload Portfolio'}
+            Add Portfolio
           </button>
         )}
       </div>
 
-      <div className="section-content">
-        {portfolio?.pdfUrl ? (
-          <div className="portfolio-viewer">
-            <div className="portfolio-info">
-              <span className="file-name">{portfolio.fileName}</span>
-              {portfolio.uploadDate && (
-                <span className="upload-date">
-                  Uploaded: {new Date(portfolio.uploadDate).toLocaleDateString()}
-                </span>
-              )}
-            </div>
+      <div className="p-0">
+        {portfolios && portfolios.length > 0 ? (
+          <div className="space-y-4 portfolios-list">
+            {portfolios.map((portfolio, index) => (
+              <div key={portfolio.id || portfolio._id || index} className="portfolio">
+                <div className="bg-custom-beige rounded-lg p-4 hover:bg-custom-yellow transition-colors duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold text-accent flex items-center gap-2">
+                        <span className="text-lg">📄</span>
+                        {portfolio.fileName}
+                      </span>
+                      {portfolio.uploadDate && (
+                        <span className="text-sm text-text-secondary flex items-center gap-1">
+                          <span className="text-xs">📅</span>
+                          {new Date(portfolio.uploadDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => handleDownload(portfolio)}
+                        className="bg-custom-yellow text-text-color border-2 border-custom-yellow px-lg py-md rounded-md font-semibold text-sm cursor-pointer transition-all duration-200 inline-flex items-center justify-center gap-sm min-h-11 hover:bg-accent hover:border-accent hover:text-white hover:translate-y-neg-0.5 hover:shadow-md"
+                      >
+                        Download
+                      </button>
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={() => handleReplace(portfolio)}
+                            className="btn-secondary btn-small"
+                          >
+                            Replace
+                          </button>
+                          <button
+                            onClick={() => handleDelete(portfolio)}
+                            className="btn-danger btn-small"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-            <div className="portfolio-actions">
-              <button onClick={handleDownload} className="download-btn">
-                Download Portfolio
-              </button>
-            </div>
-
-            <div className="pdf-viewer">
-              <iframe
-              src={`${API_URL}${portfolio.pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-              title="Portfolio PDF"
-              width="100%"
-              height="600px"
-              style={{ border: '1px solid #ddd', borderRadius: '4px' }}
-            />
-
-            </div>
+                <div className="bg-white rounded-lg border-2 border-custom-beige overflow-hidden">
+                  <iframe
+                    src={`${API_URL}${portfolio.pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                    title={`Portfolio PDF - ${portfolio.fileName}`}
+                    width="100%"
+                    height="600px"
+                    className="border-none"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="no-portfolio">
-            <p>No portfolio uploaded yet.</p>
-            {isAdmin && (
-              <button onClick={() => setShowUploadForm(true)}>
-                Upload Portfolio
-              </button>
-            )}
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📂</div>
+            <p className="text-lg mb-6">No portfolios uploaded yet.</p>
           </div>
         )}
       </div>
 
       {mounted && showUploadForm && createPortal(
-        <div className="form-popup-overlay" onClick={() => setShowUploadForm(false)}>
+        <div className="form-popup-overlay" onClick={() => {
+          setShowUploadForm(false)
+          setReplacingPortfolioId(null)
+        }}>
           <div className="form-popup" onClick={(e) => e.stopPropagation()}>
             <div className="popup-header">
-              <h3>{portfolio?.pdfUrl ? 'Replace Portfolio' : 'Upload Portfolio'}</h3>
-              <button className="close-btn" onClick={() => setShowUploadForm(false)}>×</button>
+              <h3>{replacingPortfolioId ? 'Replace Portfolio' : 'Add Portfolio'}</h3>
+              <button className="close-btn" onClick={() => {
+                setShowUploadForm(false)
+                setReplacingPortfolioId(null)
+              }}>×</button>
             </div>
-            <div className="history-content">
-              <form onSubmit={handleFileUpload} className="upload-form">
-                <div className="form-group">
-                  <label htmlFor="portfolioFile">Select PDF file:</label>
+            <div className="p-6">
+              <form onSubmit={handleFileUpload} className="space-y-6">
+                <div className="space-y-2">
+                  <label htmlFor="portfolioFile" className="block text-sm font-semibold text-text-color">Select PDF file:</label>
                   <input
                     type="file"
                     id="portfolioFile"
                     name="portfolioFile"
                     accept=".pdf"
                     required
+                    className="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-custom-beige file:text-accent hover:file:bg-custom-yellow transition-colors duration-200"
                   />
-                  <small>Maximum file size: 10MB</small>
+                  <small className="text-xs text-text-muted">Maximum file size: 10MB</small>
                 </div>
-                <div className="form-actions">
-                  <button type="submit" disabled={uploading}>
+                <div className="flex gap-3 justify-end pt-4 border-t border-custom-yellow">
+                  <button type="submit" disabled={uploading} className="btn-primary">
                     {uploading ? 'Uploading...' : 'Upload'}
                   </button>
-                  <button type="button" onClick={() => setShowUploadForm(false)}>
+                  <button type="button" onClick={() => {
+                    setShowUploadForm(false)
+                    setReplacingPortfolioId(null)
+                  }} className="btn-secondary">
                     Cancel
                   </button>
                 </div>

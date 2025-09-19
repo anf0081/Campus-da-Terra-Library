@@ -60,6 +60,7 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
     const link = window.document.createElement('a')
     link.href = `${API_URL}${doc.url}`
     link.download = doc.fileName || doc.name || 'document'
+    link.target = '_blank'
     window.document.body.appendChild(link)
     link.click()
     window.document.body.removeChild(link)
@@ -84,23 +85,41 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
         {documents?.length > 0 ? (
           <div className="documents-list">
             {documents.map((doc) => (
-              <div key={doc._id || doc.id} className="document-item">
-                <button
-                  className="document-name-btn"
-                  onClick={() => handleDownload(doc)}
-                  title="Download document"
-                >
-                  {doc.name}
-                </button>
-                {isAdmin && (
+              <div key={doc._id || doc.id} className="document-item" onClick={() => handleDownload(doc)}>
+                <div className="document-info">
+                  <div className="document-name">
+                    {doc.name}
+                  </div>
+                  {doc.fileName && (
+                    <div className="document-filename">
+                      {doc.fileName}
+                    </div>
+                  )}
+                </div>
+                <div className="document-actions">
                   <button
-                    onClick={() => handleRemoveDocument(doc._id || doc.id)}
-                    className="remove-btn"
-                    title="Remove document"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(doc);
+                    }}
+                    className="download-btn btn-small"
+                    title="Download document"
                   >
-                    &#10006;
+                    Download
                   </button>
-                )}
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveDocument(doc._id || doc.id);
+                      }}
+                      className="btn-danger btn-small"
+                      title="Remove document"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

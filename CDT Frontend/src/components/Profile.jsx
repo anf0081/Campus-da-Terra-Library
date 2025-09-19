@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import userService from '../services/users'
 
-const Profile = ({ user, setUser, setMessage, setClassName, onTokenExpired }) => {
+const Profile = ({ user, setUser, setMessage, setClassName }) => {
   const [name, setName] = useState(user?.name || '')
   const [email, setEmail] = useState(user?.email || '')
   const [contactNumber, setContactNumber] = useState(user?.contactNumber || '')
@@ -19,15 +19,6 @@ const Profile = ({ user, setUser, setMessage, setClassName, onTokenExpired }) =>
   const [password, setPassword] = useState('')
   const [isEditing, setIsEditing] = useState(false)
 
-  const handleTokenExpiration = (error) => {
-    if (error.response?.status === 401 &&
-        (error.response?.data?.error === 'token expired' ||
-         error.response?.data?.error === 'token invalid')) {
-      onTokenExpired()
-      return true
-    }
-    return false
-  }
 
   const handleEditStart = () => {
     // Populate fields with current user data when starting to edit
@@ -101,7 +92,6 @@ const Profile = ({ user, setUser, setMessage, setClassName, onTokenExpired }) =>
         setClassName('error')
       }, 5000)
     } catch (error) {
-      if (handleTokenExpiration(error)) return
       const backendMsg = error.response?.data?.error
       setMessage(backendMsg || 'Error updating profile')
       setClassName('error')
@@ -113,6 +103,11 @@ const Profile = ({ user, setUser, setMessage, setClassName, onTokenExpired }) =>
     <div>
       <h2>Profile</h2>
       <div className="profile-container">
+        {!isEditing &&
+        <div className="profile-actions">
+              <button className="outlined" onClick={handleEditStart}>Edit Profile</button>
+        </div>
+        }
         {!isEditing ? (
           <>
           <div className="profile-grid">
@@ -149,169 +144,165 @@ const Profile = ({ user, setUser, setMessage, setClassName, onTokenExpired }) =>
               <p><strong>Phone Number:</strong> {user?.emergencyContactNumber || 'Not set'}</p>
             </div>
           </div>
-          <div className="profile-actions">
-              <button onClick={handleEditStart}>Edit Profile</button>
-            </div>
             </>
         ) : (
-          <form onSubmit={handleSave}>
-            <div className="profile-grid">
-              <div className="profile-section">
+          <form onSubmit={handleSave} className="student-form">
+            <div className="form-sections">
+              <div className="form-section">
                 <h3>Login Information</h3>
-                <p className="profile-field"><strong>Username:</strong> {user?.username}</p>
-                <p className="profile-field">
-                  <strong>Password:</strong>
+                <div className="form-group">
+                  <label>Username</label>
+                  <input
+                    type="text"
+                    value={user?.username || ''}
+                    disabled
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Password</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Leave blank to keep current password"
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field"><strong>Role:</strong> {user?.role}</p>
-                <p className="profile-field">
-                  <strong>Email:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Role</label>
+                  <input
+                    type="text"
+                    value={user?.role || ''}
+                    disabled
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Phone:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Phone</label>
                   <input
                     type="tel"
                     value={contactNumber}
                     onChange={(e) => setContactNumber(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
+                </div>
               </div>
 
-              <div className="profile-section">
+              <div className="form-section">
                 <h3>Personal Information</h3>
-                <p className="profile-field">
-                  <strong>Full Name:</strong>
+                <div className="form-group">
+                  <label>Full Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Nationality:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Nationality</label>
                   <input
                     type="text"
                     value={parentNationality}
                     onChange={(e) => setParentNationality(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Passport Number:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Passport Number</label>
                   <input
                     type="text"
                     value={parentPassportNumber}
                     onChange={(e) => setParentPassportNumber(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Passport Expiry:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Passport Expiry</label>
                   <input
                     type="date"
                     value={parentPassportExpiryDate}
                     onChange={(e) => setParentPassportExpiryDate(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>NIF Number:</strong>
+                </div>
+                <div className="form-group">
+                  <label>NIF Number</label>
                   <input
                     type="text"
                     value={parentNifNumber}
                     onChange={(e) => setParentNifNumber(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
+                </div>
               </div>
 
-              <div className="profile-section">
+              <div className="form-section">
                 <h3>Address</h3>
-                <p className="profile-field">
-                  <strong>Street Address:</strong>
+                <div className="form-group">
+                  <label>Street Address</label>
                   <input
                     type="text"
                     value={parentStreetAddress}
                     onChange={(e) => setParentStreetAddress(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>City:</strong>
+                </div>
+                <div className="form-group">
+                  <label>City</label>
                   <input
                     type="text"
                     value={parentCity}
                     onChange={(e) => setParentCity(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Postal Code:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Postal Code</label>
                   <input
                     type="text"
                     value={parentPostalCode}
                     onChange={(e) => setParentPostalCode(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Country:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Country</label>
                   <input
                     type="text"
                     value={parentCountry}
                     onChange={(e) => setParentCountry(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
+                </div>
               </div>
 
-              <div className="profile-section">
+              <div className="form-section">
                 <h3>Emergency Contact</h3>
-                <p className="profile-field">
-                  <strong>Relationship:</strong>
+                <div className="form-group">
+                  <label>Relationship</label>
                   <input
                     type="text"
                     value={emergencyContactRelationship}
                     onChange={(e) => setEmergencyContactRelationship(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Name:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Name</label>
                   <input
                     type="text"
                     value={emergencyContactName}
                     onChange={(e) => setEmergencyContactName(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Phone Number:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Phone Number</label>
                   <input
                     type="tel"
                     value={emergencyContactNumber}
                     onChange={(e) => setEmergencyContactNumber(e.target.value)}
-                    className="profile-input"
                   />
-                </p>
+                </div>
               </div>
             </div>
 
-            <div className="profile-actions">
+            <div className="form-actions">
               <button type="submit">Save</button>
               <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
             </div>

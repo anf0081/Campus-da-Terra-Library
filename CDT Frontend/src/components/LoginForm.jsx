@@ -1,4 +1,4 @@
-const LoginForm = ({ handleLogin, username, setUsername, password, setPassword, onCancel }) => (
+const LoginForm = ({ handleLogin, username, setUsername, password, setPassword, rememberMe, setRememberMe, onCancel }) => (
   <div>
     <h3>Login</h3>
     <form
@@ -31,9 +31,19 @@ const LoginForm = ({ handleLogin, username, setUsername, password, setPassword, 
           />
         </label>
       </div>
+      <div className="remember-me checkbox-group">
+        <label>
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={({ target }) => setRememberMe(target.checked)}
+          />
+          Remember Me (30 days)
+        </label>
+      </div>
       <div className="login-popup-actions">
-        <button type="submit">Login</button>
-        <button type="button" onClick={onCancel}>Cancel</button>
+        <button class="inverted" type="submit">Login</button>
+        <button class="inverted" type="button" onClick={onCancel}>Cancel</button>
       </div>
     </form>
   </div>

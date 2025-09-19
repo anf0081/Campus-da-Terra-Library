@@ -4,6 +4,14 @@ const bookSchema = mongoose.Schema({
   title: String,
   author: String,
   url: String,
+  language: {
+    type: String,
+    default: ''
+  },
+  difficulty: {
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert']
+  },
   likes: Number,
   user: {
     type: mongoose.Schema.Types.ObjectId,

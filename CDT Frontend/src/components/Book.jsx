@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
-const Book = ({ book, user, onBorrow, onReturn, onClearHistory, onUpdateBook, onDeleteBook }) => {
+const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHistory, onUpdateBook, onDeleteBook }) => {
   const [showHistory, setShowHistory] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState('')
   const isAvailable = !book.lending?.isLent
-  const isAdmin = user && user.role === 'admin'
+  const isAdmin = user?.role === 'admin'
   const isBorrower =
     user &&
     book.lending?.borrower &&
@@ -38,7 +39,7 @@ const Book = ({ book, user, onBorrow, onReturn, onClearHistory, onUpdateBook, on
   }
 
   const handleUpdateBook = (updatedData) => {
-    onUpdateBook(book.id, updatedData)
+    onUpdateBook(updatedData)
     setShowEditForm(false)
   }
 
@@ -46,6 +47,13 @@ const Book = ({ book, user, onBorrow, onReturn, onClearHistory, onUpdateBook, on
     if (window.confirm(`Are you sure you want to delete "${book.title}"? This action cannot be undone.`)) {
       onDeleteBook(book.id)
       setShowEditForm(false)
+    }
+  }
+
+  const handleLendTo = () => {
+    if (selectedUserId) {
+      onLendTo(selectedUserId)
+      setSelectedUserId('')
     }
   }
 
@@ -64,13 +72,30 @@ const Book = ({ book, user, onBorrow, onReturn, onClearHistory, onUpdateBook, on
 
       <div className="book-content">
         <div className="book-info">
-          <h3 className="book-title">{book.title}</h3>
+          <h4 className="book-title">{book.title}</h4>
           <p className="book-author">by {book.author}</p>
+          {book.language && (
+            <p className="book-language">
+              <span className="book-meta-label">Language:</span> {book.language}
+            </p>
+          )}
+          {book.difficulty && (
+            <p className="book-difficulty">
+              <span className="book-meta-label">Difficulty:</span> {book.difficulty}
+            </p>
+          )}
         </div>
 
         <div className="book-status">
           <div className={`status-badge ${isAvailable ? 'available' : 'borrowed'}`}>
-            {isAvailable ? '● Available' : isBorrower ? '● You borrowed this' : '● Lent out'}
+            {isAvailable
+              ? '● Available'
+              : isBorrower
+                ? '● You borrowed this'
+                : isAdmin && book.lending?.borrower
+                  ? `● Lent to ${book.lending.borrower.name || book.lending.borrower.username || 'Unknown User'}`
+                  : '● Lent out'
+            }
           </div>
 
           {isBorrower && daysLeft !== null && (
@@ -84,16 +109,49 @@ const Book = ({ book, user, onBorrow, onReturn, onClearHistory, onUpdateBook, on
         </div>
 
         <div className="book-actions">
-          {canBorrow && (
-            <button className="borrow-btn" onClick={() => onBorrow(book.id)}>
-              Borrow for 3 weeks
-            </button>
-          )}
-          {(book.lending?.isLent && (isBorrower || isAdmin)) && (
-            <button className="return-btn" onClick={() => onReturn(book.id)}>
-              Return Book
-            </button>
-          )}
+          <div className="action-buttons">
+            {canBorrow && (
+              <button className="borrow-btn" onClick={() => onBorrow(book.id)}>
+                Borrow for 3 weeks
+              </button>
+            )}
+            {isAdmin && isAvailable && users.length > 0 && (
+              <div className="admin-lend-controls">
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="user-select"
+                >
+                  <option value="">Select user to lend to...</option>
+                  {users.filter(u => u.role !== 'admin').map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.name || user.username}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="lend-btn"
+                  onClick={handleLendTo}
+                  disabled={!selectedUserId}
+                >
+                  Lend for 3 weeks
+                </button>
+              </div>
+            )}
+            {(book.lending?.isLent && (isBorrower || isAdmin)) && (
+              <button className="outlined" onClick={() => onReturn(book.id)}>
+                Return Book
+              </button>
+            )}
+          </div>
+          <div className="book-badges">
+            {book.language && (
+              <span className="book-badge language-badge">{book.language}</span>
+            )}
+            {book.difficulty && (
+              <span className="book-badge difficulty-badge">{book.difficulty}</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -203,6 +261,8 @@ const EditBookForm = ({ book, onUpdate, onDelete }) => {
   const [title, setTitle] = useState(book.title)
   const [author, setAuthor] = useState(book.author)
   const [url, setUrl] = useState(book.url)
+  const [language, setLanguage] = useState(book.language || '')
+  const [difficulty, setDifficulty] = useState(book.difficulty || '')
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -210,7 +270,14 @@ const EditBookForm = ({ book, onUpdate, onDelete }) => {
       alert('Title is required')
       return
     }
-    onUpdate({ title: title.trim(), author: author.trim() || 'Unknown Author', url: url.trim() || '' })
+    const updateData = {
+      title: title.trim(),
+      author: author.trim() || 'Unknown Author',
+      url: url.trim() || '',
+      language: language.trim(),
+      difficulty
+    }
+    onUpdate(updateData)
   }
 
   return (
@@ -242,8 +309,31 @@ const EditBookForm = ({ book, onUpdate, onDelete }) => {
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          required
         />
+      </div>
+      <div className="form-group">
+        <label htmlFor="book-language">Language:</label>
+        <input
+          id="book-language"
+          type="text"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          placeholder="e.g., English, Portuguese, Spanish"
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="book-difficulty">Reading Difficulty:</label>
+        <select
+          id="book-difficulty"
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
+        >
+          <option value="">Select difficulty level...</option>
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+          <option value="Expert">Expert</option>
+        </select>
       </div>
       <div className="form-actions">
         <button type="submit" className="save-btn">Save Changes</button>

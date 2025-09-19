@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import Book from './Book'
 import BookForm from './BookForm'
 import bookService from '../services/books'
+import userService from '../services/users'
 
 const Library = ({ user, setMessage, setClassName }) => {
   const [books, setBooks] = useState([])
@@ -10,6 +11,7 @@ const Library = ({ user, setMessage, setClassName }) => {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [users, setUsers] = useState([])
 
   useEffect(() => {
     setLoading(true)
@@ -24,6 +26,17 @@ const Library = ({ user, setMessage, setClassName }) => {
       })
       .finally(() => setLoading(false))
   }, [page])
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      userService.getAll()
+        .then(setUsers)
+        .catch(error => {
+          console.error('Error fetching users:', error)
+          setUsers([])
+        })
+    }
+  }, [user])
 
   if (loading) return <div className="loading">Loading books...</div>
 
@@ -52,6 +65,12 @@ const Library = ({ user, setMessage, setClassName }) => {
           updatedBook = await bookService.lend(bookId)
           setMessage('Book borrowed for 3 weeks')
           break
+        case 'lendTo': {
+          updatedBook = await bookService.lend(bookId, data.userId)
+          const borrowerName = users.find(u => u.id === data.userId)?.name || 'User'
+          setMessage(`Book lent to ${borrowerName} for 3 weeks`)
+          break
+        }
         case 'return':
           updatedBook = await bookService.returnBook(bookId)
           setMessage('Book returned successfully')
@@ -97,7 +116,7 @@ const availableBooks = books.filter(b => !borrowedBooks.includes(b))
       <h2>Campus da Terra Library</h2>
       <div className="library-actions">
         {user && user.role === 'admin' && (
-          <button onClick={() => setShowCreateForm(true)}>Add New Book</button>
+          <button className="outlined" onClick={() => setShowCreateForm(true)}>Add New Book</button>
         )}
       </div>
 
@@ -110,7 +129,9 @@ const availableBooks = books.filter(b => !borrowedBooks.includes(b))
                 key={book.id}
                 book={book}
                 user={user}
+                users={users}
                 onBorrow={() => handleAction('borrow', book.id)}
+                onLendTo={(userId) => handleAction('lendTo', book.id, { userId })}
                 onReturn={() => handleAction('return', book.id)}
                 onClearHistory={() => handleAction('clearHistory', book.id)}
                 onUpdateBook={(data) => handleAction('update', book.id, data)}
@@ -134,7 +155,9 @@ const availableBooks = books.filter(b => !borrowedBooks.includes(b))
               key={book.id}
               book={book}
               user={user}
+              users={users}
               onBorrow={() => handleAction('borrow', book.id)}
+              onLendTo={(userId) => handleAction('lendTo', book.id, { userId })}
               onReturn={() => handleAction('return', book.id)}
               onClearHistory={() => handleAction('clearHistory', book.id)}
               onUpdateBook={(data) => handleAction('update', book.id, data)}

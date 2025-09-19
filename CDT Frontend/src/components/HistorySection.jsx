@@ -8,6 +8,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
   const [showAddForm, setShowAddForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [eventType, setEventType] = useState('')
+  const [uploadingInvoice, setUploadingInvoice] = useState(null)
 
   const handleAddEvent = async (e) => {
     e.preventDefault()
@@ -25,10 +26,39 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
       newEvent.year = parseInt(formData.get('year'))
     }
 
+    const invoiceFile = formData.get('receiptFile')
+
     try {
       setIsSubmitting(true)
+
+      // First, create the history event
       const updatedDashboard = await dashboardService.addHistoryEvent(studentId, newEvent)
-      onUpdate(updatedDashboard)
+
+      // If there's an invoice file and it's a receipt event, upload the file
+      if (invoiceFile && invoiceFile.size > 0 && newEvent.type === 'receipt') {
+        if (invoiceFile.size > 10 * 1024 * 1024) {
+          showMessage('Invoice file size must be less than 10MB', 'error')
+          return
+        }
+
+        // Find the newly created receipt event to get its ID
+        const receiptEvents = updatedDashboard.history.filter(event =>
+          event.type === 'receipt' &&
+          event.month === newEvent.month &&
+          event.year === newEvent.year
+        )
+        const newReceiptEvent = receiptEvents[receiptEvents.length - 1]
+
+        if (newReceiptEvent) {
+          await dashboardService.uploadInvoiceFile(studentId, newReceiptEvent._id, invoiceFile)
+          // Fetch updated dashboard data to reflect the file upload
+          const finalDashboard = await dashboardService.getByStudentId(studentId)
+          onUpdate(finalDashboard)
+        }
+      } else {
+        onUpdate(updatedDashboard)
+      }
+
       setShowAddForm(false)
       showMessage('History event added successfully')
     } catch (error) {
@@ -64,6 +94,45 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
     }
   }
 
+  const handleUploadInvoice = async (eventId, file) => {
+    if (!file || file.size === 0) return
+
+    if (file.size > 10 * 1024 * 1024) {
+      showMessage('Invoice file size must be less than 10MB', 'error')
+      return
+    }
+
+    try {
+      setUploadingInvoice(eventId)
+      await dashboardService.uploadInvoiceFile(studentId, eventId, file)
+      const updatedDashboard = await dashboardService.getByStudentId(studentId)
+      onUpdate(updatedDashboard)
+      showMessage('Invoice uploaded successfully')
+    } catch (error) {
+      console.error('Error uploading invoice:', error)
+      showMessage(error.response?.data?.error || 'Failed to upload invoice', 'error')
+    } finally {
+      setUploadingInvoice(null)
+    }
+  }
+
+  const handleDeleteInvoice = async (eventId) => {
+    if (!window.confirm('Are you sure you want to delete this invoice?')) return
+
+    try {
+      setUploadingInvoice(eventId)
+      await dashboardService.deleteInvoiceFile(studentId, eventId)
+      const updatedDashboard = await dashboardService.getByStudentId(studentId)
+      onUpdate(updatedDashboard)
+      showMessage('Invoice deleted successfully')
+    } catch (error) {
+      console.error('Error deleting invoice:', error)
+      showMessage(error.response?.data?.error || 'Failed to delete invoice', 'error')
+    } finally {
+      setUploadingInvoice(null)
+    }
+  }
+
   const getEventIcon = (type) => {
     switch (type) {
       case 'enrollment_start': return '🎓'
@@ -76,7 +145,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
   const getEventTitle = (event) => {
     switch (event.type) {
       case 'enrollment_start': return 'Enrollment Start'
-      case 'receipt': return `Receipt - ${event.month} ${event.year}`
+      case 'receipt': return `Invoice - ${event.month} ${event.year}`
       case 'enrollment_end': return 'Expected Enrollment End'
       default: return event.description || 'Event'
     }
@@ -119,26 +188,90 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                   <div className="event-footer">
                     {event.type === 'receipt' && (
                       <span className={getPaymentStatusClass(event.paymentStatus)}>
-                        {event.paymentStatus === 'paid' ? <div className="success-text">&#10003; Paid</div> : <div className="fail-text">&#10007; Not Paid</div>}
+                        {event.paymentStatus === 'paid' ?
+                          <span className="success-text">✓ Paid</span> :
+                          <span className="fail-text">✗ Not Paid</span>
+                        }
                       </span>
                     )}
                     <div className="event-actions">
                       {event.downloadUrl && (
                         <button
                           onClick={() => handleDownload(event)}
-                          className="download-btn small"
+                          className="download-btn btn-small"
                           title="Download document"
                         >
                           Download
                         </button>
                       )}
+
+                      {isAdmin && event.type === 'receipt' && !event.downloadUrl && (
+                        <div className="invoice-upload">
+                          <input
+                            type="file"
+                            id={`upload-${event._id}`}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files[0]
+                              if (file) {
+                                handleUploadInvoice(event._id, file)
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => document.getElementById(`upload-${event._id}`).click()}
+                            className="upload-btn btn-small"
+                            title="Upload invoice"
+                            disabled={uploadingInvoice === event._id}
+                          >
+                            {uploadingInvoice === event._id ? 'Uploading...' : 'Upload Invoice'}
+                          </button>
+                        </div>
+                      )}
+
+                      {isAdmin && event.type === 'receipt' && event.downloadUrl && (
+                        <>
+                          <div className="invoice-replace">
+                            <input
+                              type="file"
+                              id={`replace-${event._id}`}
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files[0]
+                                if (file) {
+                                  handleUploadInvoice(event._id, file)
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => document.getElementById(`replace-${event._id}`).click()}
+                              className="replace-btn btn-small"
+                              title="Replace invoice"
+                              disabled={uploadingInvoice === event._id}
+                            >
+                              {uploadingInvoice === event._id ? 'Replacing...' : 'Replace Invoice'}
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteInvoice(event._id)}
+                            className="btn-danger btn-small"
+                            title="Delete invoice"
+                            disabled={uploadingInvoice === event._id}
+                          >
+                            Delete Invoice
+                          </button>
+                        </>
+                      )}
+
                       {isAdmin && (
                         <button
                           onClick={() => handleRemoveEvent(event._id)}
-                          className="remove-btn small"
+                          className="btn-danger btn-small"
                           title="Remove event"
                         >
-                          &#10006;
+                          Remove
                         </button>
                       )}
                     </div>
@@ -150,7 +283,6 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
         ) : (
           <div className="no-history">
             <p>No history events yet.</p>
-            {isAdmin && <button onClick={() => setShowAddForm(true)}>Add First Event</button>}
           </div>
         )}
       </div>
@@ -213,6 +345,17 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
         <option value="not_paid">Not Paid</option>
         <option value="paid">Paid</option>
       </select>
+    </div>
+
+    <div className="form-group">
+      <label htmlFor="receiptFile">Invoice File (Optional):</label>
+      <input
+        type="file"
+        id="receiptFile"
+        name="receiptFile"
+        accept=".pdf,.jpg,.jpeg,.png"
+      />
+      <small>Accepted formats: PDF, JPG, PNG (Max: 10MB)</small>
     </div>
   </>
 )}
