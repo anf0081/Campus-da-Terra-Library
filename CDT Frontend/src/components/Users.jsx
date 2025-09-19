@@ -91,7 +91,8 @@ const Users = ({ user, setMessage, setClassName }) => {
     username: user.username || '',
     password: '',
     email: user.email || '',
-    contactNumber: user.contactNumber || '', 
+    contactNumber: user.contactNumber || '',
+    role: user.role || '',
     name: user.name || '',
     parentNationality: user.parentNationality || '',
     parentPassportNumber: user.parentPassportNumber || '',
@@ -288,7 +289,13 @@ const Users = ({ user, setMessage, setClassName }) => {
 
   return (
     <div>
-      <h2>Users Management</h2>
+      <h2>
+        {isCreating ? 'Add New User' :
+         isEditing ? `Edit ${selectedUser?.name}` :
+         !isCreating && !isEditing && !selectedUser ? 'Users' :
+         `${selectedUser?.name}`}
+      </h2>
+      
 
       {!isCreating && !isEditing && !selectedUser ? (
         <div className="users-container">
@@ -313,203 +320,186 @@ const Users = ({ user, setMessage, setClassName }) => {
             )}
           </div>
       ) : isCreating ? (
-        <div className="user-detail-container">
-          <div className="user-actions">
+        <div className="profile-detail-container">
+          <div className="profile-actions">
             <button onClick={() => { setIsCreating(false); setSelectedUser(null); }}>
               ← Back to Users List
             </button>
           </div>
 
-          <form onSubmit={handleSave} className="user-form">
+          <form onSubmit={handleSave} className="profile-form">
             <h3>Create New User</h3>
 
-            <div className="profile-grid">
-              <div className="profile-section">
+            <div className="form-sections">
+              <div className="form-section">
                 <h3>Login Information</h3>
-                <p className="profile-field">
-                  <strong>Username:</strong>
+                <div className="form-group">
+                  <label>Username:</label>
                   <input
                     type="text"
                     value={formData.username}
                     onChange={(e) => handleInputChange('username', e.target.value)}
-                    className="profile-input"
                     required
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Password:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Password:</label>
                   <input
                     type="password"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className="profile-input"
                     required
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Role:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Role:</label>
                   <select
                     value={formData.role}
                     onChange={(e) => handleInputChange('role', e.target.value)}
-                    className="profile-input"
                     required
                   >
                     <option value="">Select Role</option>
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
                   </select>
-                </p>
-                <p className="profile-field">
-                  <strong>Email:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Email:</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="profile-input"
                     required
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Phone:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Phone:</label>
                   <input
                     type="tel"
                     value={formData.contactNumber}
                     onChange={(e) => handleInputChange('contactNumber', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
+                </div>
               </div>
 
-              <div className="profile-section">
+              <div className="form-section">
                 <h3>Personal Information</h3>
-                <p className="profile-field">
-                  <strong>Full Name:</strong>
+                <div className="form-group">
+                  <label>Full Name:</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Nationality:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Nationality:</label>
                   <input
                     type="text"
                     value={formData.parentNationality}
                     onChange={(e) => handleInputChange('parentNationality', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Passport Number:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Passport Number:</label>
                   <input
                     type="text"
                     value={formData.parentPassportNumber}
                     onChange={(e) => handleInputChange('parentPassportNumber', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Passport Expiry:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Passport Expiry:</label>
                   <input
                     type="date"
                     value={formData.parentPassportExpiryDate}
                     onChange={(e) => handleInputChange('parentPassportExpiryDate', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>NIF Number:</strong>
+                </div>
+                <div className="form-group">
+                  <label>NIF Number:</label>
                   <input
                     type="text"
                     value={formData.parentNifNumber}
                     onChange={(e) => handleInputChange('parentNifNumber', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
+                </div>
               </div>
 
-              <div className="profile-section">
+              <div className="form-section">
                 <h3>Address</h3>
-                <p className="profile-field">
-                  <strong>Street Address:</strong>
+                <div className="form-group">
+                  <label>Street Address:</label>
                   <input
                     type="text"
                     value={formData.parentStreetAddress}
                     onChange={(e) => handleInputChange('parentStreetAddress', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>City:</strong>
+                </div>
+                <div className="form-group">
+                  <label>City:</label>
                   <input
                     type="text"
                     value={formData.parentCity}
                     onChange={(e) => handleInputChange('parentCity', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Postal Code:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Postal Code:</label>
                   <input
                     type="text"
                     value={formData.parentPostalCode}
                     onChange={(e) => handleInputChange('parentPostalCode', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Country:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Country:</label>
                   <input
                     type="text"
                     value={formData.parentCountry}
                     onChange={(e) => handleInputChange('parentCountry', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
+                </div>
               </div>
 
-              <div className="profile-section">
+              <div className="form-section">
                 <h3>Emergency Contact</h3>
-                <p className="profile-field">
-                  <strong>Relationship:</strong>
+                <div className="form-group">
+                  <label>Relationship:</label>
                   <input
                     type="text"
                     value={formData.emergencyContactRelationship}
                     onChange={(e) => handleInputChange('emergencyContactRelationship', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Name:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Name:</label>
                   <input
                     type="text"
                     value={formData.emergencyContactName}
                     onChange={(e) => handleInputChange('emergencyContactName', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
-                <p className="profile-field">
-                  <strong>Phone Number:</strong>
+                </div>
+                <div className="form-group">
+                  <label>Phone Number:</label>
                   <input
                     type="tel"
                     value={formData.emergencyContactNumber}
                     onChange={(e) => handleInputChange('emergencyContactNumber', e.target.value)}
-                    className="profile-input"
                   />
-                </p>
+                </div>
               </div>
             </div>
 
-            <div className="profile-actions">
+            <div className="form-actions">
               <button type="submit">Create User</button>
               <button type="button" onClick={handleCancel}>Cancel</button>
             </div>
           </form>
         </div>
       ) : (
-        <div className="user-detail-container">
-          <div className="user-actions">
+        <div className="profile-detail-container">
+          <div className="profile-actions">
             <button className="outlined" onClick={() => {
               setSelectedUser(null);
               setIsEditing(false);
@@ -523,9 +513,7 @@ const Users = ({ user, setMessage, setClassName }) => {
           </div>
 
           {(!isEditing && !isCreating) ? (
-            <div className="user-detail">
-
-              <div className="detail-sections">
+            <div className="detail-sections">
                 <div className="detail-section">
                   <h3>Login and Contact</h3>
                   <p><strong>Username:</strong> {selectedUser.username}</p>
@@ -576,169 +564,171 @@ const Users = ({ user, setMessage, setClassName }) => {
                   </div>
                 )}
               </div>
-            </div>
           )
           : isEditing ? (
-              <form onSubmit={handleSave} className="user-form">
-                <h3>Edit User: {selectedUser.username}</h3>
+              <form onSubmit={handleSave} className="profile-form">
 
-              <div className="profile-grid">
-                <div className="profile-section">
+              <div className="form-sections">
+                <div className="form-section">
                   <h3>Login Information</h3>
-                  <p className="profile-field"><strong>Username:</strong> {selectedUser.username}</p>
-                  <p className="profile-field">
-                    <strong>Password:</strong>
+                  <div className="form-group">
+                    <label>Username</label>
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => handleInputChange('username', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Password</label>
                     <input
                       type="password"
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
                       placeholder="Leave blank to keep current password"
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field"><strong>Role:</strong> {selectedUser.role}</p>
-                  <p className="profile-field">
-                    <strong>Email:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Role</label>
+                    <select
+                      value={formData.role}
+                      onChange={(e) => handleInputChange('role', e.target.value)}
+                      required
+                    >
+                      <option value="">Select Role</option>
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>Phone:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Phone</label>
                     <input
                       type="tel"
                       value={formData.contactNumber}
                       onChange={(e) => handleInputChange('contactNumber', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
+                  </div>
                 </div>
 
-                <div className="profile-section">
+                <div className="form-section">
                   <h3>Personal Information</h3>
-                  <p className="profile-field">
-                    <strong>Full Name:</strong>
+                  <div className="form-group">
+                    <label>Full Name</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>Nationality:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Nationality</label>
                     <input
                       type="text"
                       value={formData.parentNationality}
                       onChange={(e) => handleInputChange('parentNationality', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>Passport Number:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Passport Number</label>
                     <input
                       type="text"
                       value={formData.parentPassportNumber}
                       onChange={(e) => handleInputChange('parentPassportNumber', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>Passport Expiry:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Passport Expiry</label>
                     <input
                       type="date"
                       value={formData.parentPassportExpiryDate}
                       onChange={(e) => handleInputChange('parentPassportExpiryDate', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>NIF Number:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>NIF Number</label>
                     <input
                       type="text"
                       value={formData.parentNifNumber}
                       onChange={(e) => handleInputChange('parentNifNumber', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
+                  </div>
                 </div>
 
-                <div className="profile-section">
+                <div className="form-section">
                   <h3>Address</h3>
-                  <p className="profile-field">
-                    <strong>Street Address:</strong>
+                  <div className="form-group">
+                    <label>Street Address</label>
                     <input
                       type="text"
                       value={formData.parentStreetAddress}
                       onChange={(e) => handleInputChange('parentStreetAddress', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>City:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>City</label>
                     <input
                       type="text"
                       value={formData.parentCity}
                       onChange={(e) => handleInputChange('parentCity', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>Postal Code:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Postal Code</label>
                     <input
                       type="text"
                       value={formData.parentPostalCode}
                       onChange={(e) => handleInputChange('parentPostalCode', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>Country:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Country</label>
                     <input
                       type="text"
                       value={formData.parentCountry}
                       onChange={(e) => handleInputChange('parentCountry', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
+                  </div>
                 </div>
 
-                <div className="profile-section">
+                <div className="form-section">
                   <h3>Emergency Contact</h3>
-                  <p className="profile-field">
-                    <strong>Relationship:</strong>
+                  <div className="form-group">
+                    <label>Relationship</label>
                     <input
                       type="text"
                       value={formData.emergencyContactRelationship}
                       onChange={(e) => handleInputChange('emergencyContactRelationship', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>Name:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Name</label>
                     <input
                       type="text"
                       value={formData.emergencyContactName}
                       onChange={(e) => handleInputChange('emergencyContactName', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
-                  <p className="profile-field">
-                    <strong>Phone Number:</strong>
+                  </div>
+                  <div className="form-group">
+                    <label>Phone Number</label>
                     <input
                       type="tel"
                       value={formData.emergencyContactNumber}
                       onChange={(e) => handleInputChange('emergencyContactNumber', e.target.value)}
-                      className="profile-input"
                     />
-                  </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="profile-actions">
+              <div className="form-actions">
                 <button type="submit">Save</button>
                 <button type="button" onClick={handleCancel}>Cancel</button>
               </div>

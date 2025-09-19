@@ -31,6 +31,10 @@ const studentSchema = mongoose.Schema({
     type: Date,
     required: true
   },
+  profilePicture: {
+    type: String,
+    trim: true
+  },
 
   // Address Information
   streetAddress: {
@@ -212,6 +216,19 @@ const studentSchema = mongoose.Schema({
     type: Boolean,
     default: false
   },
+
+  // Wishlist for books
+  wishlist: [{
+    bookId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Book',
+      required: true
+    },
+    addedDate: {
+      type: Date,
+      default: Date.now
+    }
+  }],
 
   // Timestamps
   createdAt: {

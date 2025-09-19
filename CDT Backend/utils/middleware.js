@@ -16,10 +16,10 @@ const userExtractor = async (request, response, next) => {
   try {
     const token = request.get('authorization')?.replace('Bearer ', '')
     const decodedToken = jwt.verify(token, process.env.SECRET)
-    if (!decodedToken.id) return response.status(401).json({ error: 'token invalid' })
+    if (!decodedToken.id) return response.status(401).json({ error: 'Token invalid' })
 
     const user = await User.findById(decodedToken.id)
-    if (!user) return response.status(401).json({ error: 'user not found' })
+    if (!user) return response.status(401).json({ error: 'User not found' })
 
     request.user = user
     next()
@@ -46,13 +46,13 @@ const errorHandler = (error, request, response, next) => {
   } else if (error.name === 'ValidationError') {
     return response.status(400).json({ error: error.message })
   } else if (error.name === 'MongoServerError' && error.message.includes('E11000 duplicate key error')) {
-    return response.status(400).json({ error: 'expected `username` to be unique' })
+    return response.status(400).json({ error: 'Expected `username` to be unique' })
   } else if (error.name ===  'JsonWebTokenError') {
-    return response.status(401).json({ error: 'token invalid' })
+    return response.status(401).json({ error: 'Token invalid' })
   } else if (error.name === 'TokenExpiredError') {
-    return response.status(401).json({ error: 'token expired' })
+    return response.status(401).json({ error: 'Token expired' })
   } else if (error.name === 'TypeError' && error.message.includes('Cannot read properties')) {
-    return response.status(401).json({ error: 'token missing' })
+    return response.status(401).json({ error: 'Token missing' })
   }
   next(error)
 }

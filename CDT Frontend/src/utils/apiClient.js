@@ -1,55 +1,50 @@
 import axios from 'axios'
 
+const baseURL = '/api'
+
 let token = null
-let onTokenExpiredCallback = null
 
-const apiClient = axios.create({
-  baseURL: '/api'
-})
+const setToken = newToken => {
+  token = newToken
+}
 
-// Request interceptor to add authorization header
-apiClient.interceptors.request.use(
-  (config) => {
-    if (token) {
-      config.headers.Authorization = token
-    }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
+export { setToken }
 
-// Response interceptor to handle token expiration
-apiClient.interceptors.response.use(
-  (response) => {
-    return response
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      const errorMessage = error.response?.data?.error
-
-      // Check if the error is related to token issues
-      const tokenErrors = ['token missing', 'token invalid', 'token expired', 'user not found']
-
-      if (tokenErrors.some(msg => errorMessage?.includes(msg))) {
-        // Clear the token and trigger logout
-        token = null
-        if (onTokenExpiredCallback) {
-          onTokenExpiredCallback()
-        }
+export default {
+  get: (url, config = {}) => {
+    return axios.get(`${baseURL}${url}`, {
+      ...config,
+      headers: {
+        ...config.headers,
+        Authorization: token ? `Bearer ${token}` : ''
       }
-    }
-    return Promise.reject(error)
+    })
+  },
+  post: (url, data, config = {}) => {
+    return axios.post(`${baseURL}${url}`, data, {
+      ...config,
+      headers: {
+        ...config.headers,
+        Authorization: token ? `Bearer ${token}` : ''
+      }
+    })
+  },
+  put: (url, data, config = {}) => {
+    return axios.put(`${baseURL}${url}`, data, {
+      ...config,
+      headers: {
+        ...config.headers,
+        Authorization: token ? `Bearer ${token}` : ''
+      }
+    })
+  },
+  delete: (url, config = {}) => {
+    return axios.delete(`${baseURL}${url}`, {
+      ...config,
+      headers: {
+        ...config.headers,
+        Authorization: token ? `Bearer ${token}` : ''
+      }
+    })
   }
-)
-
-export const setToken = (newToken) => {
-  token = newToken ? `Bearer ${newToken}` : null
 }
-
-export const setOnTokenExpiredCallback = (callback) => {
-  onTokenExpiredCallback = callback
-}
-
-export default apiClient

@@ -1,8 +1,7 @@
-import axios from 'axios'
-const baseUrl = '/api/login'
+import apiClient from '../utils/apiClient'
 
 const login = async ({ username, password, rememberMe }) => {
-  const response = await axios.post(baseUrl, { username, password, rememberMe })
+  const response = await apiClient.post('/login', { username, password, rememberMe })
   return response.data
 }
 

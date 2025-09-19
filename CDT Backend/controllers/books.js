@@ -34,7 +34,7 @@ booksRouter.get('/', async (request, response) => {
     })
   } catch (error) {
     console.error('Error fetching books:', error)
-    response.status(500).json({ error: 'internal server error' })
+    response.status(500).json({ error: 'Internal server error' })
   }
 })
 
@@ -42,11 +42,11 @@ booksRouter.get('/', async (request, response) => {
 
 booksRouter.post('/', userExtractor, async (request, response) => {
   if (!request.user || request.user.role !== 'admin' && request.user.role !== 'tutor') {
-    return response.status(403).json({ error: 'only admins and tutors can add books' })
+    return response.status(403).json({ error: 'Only admins and tutors can add books' })
   }
   const body = request.body
   if (!body.title) {
-    return response.status(400).json({ error: 'title is required' })
+    return response.status(400).json({ error: 'Title is required' })
   }
 
   const book = new Book({
@@ -65,21 +65,21 @@ booksRouter.post('/', userExtractor, async (request, response) => {
 
 booksRouter.delete('/:id', userExtractor, async (request, response) => {
   if (!request.user || (request.user.role !== 'admin' && request.user.role !== 'tutor')) {
-    return response.status(403).json({ error: 'only admins and tutors can delete books' })
+    return response.status(403).json({ error: 'Only admins and tutors can delete books' })
   }
 
 
   const book = await Book.findById(request.params.id)
 
   if (!book) {
-    return response.status(404).json({ error: 'book not found' })
+    return response.status(404).json({ error: 'Book not found' })
   }
 
   if (book.user.toString() === request.user._id.toString()) {
     await Book.findByIdAndDelete(book._id)
     response.status(204).end()
   } else {
-    return response.status(403).json({ error: 'unauthorized: can only delete your own books' })
+    return response.status(403).json({ error: 'Unauthorized: can only delete your own books' })
   }
 })
 
@@ -98,7 +98,7 @@ booksRouter.put('/:id', userExtractor, async (request, response) => {
     } else {
       // Admin updating book details
       if (!request.user || (request.user.role !== 'admin' && request.user.role !== 'tutor')) {
-        return response.status(403).json({ error: 'only admins and tutors can update books' })
+        return response.status(403).json({ error: 'Only admins and tutors can update books' })
       }
 
       if (title !== undefined) updateBook.title = title
@@ -152,11 +152,11 @@ booksRouter.put('/:id/lend', userExtractor, async (request, response) => {
 
   const book = await Book.findById(request.params.id)
   if (!book) {
-    return response.status(404).json({ error: 'book not found' })
+    return response.status(404).json({ error: 'Book not found' })
   }
 
   if (book.lending.isLent) {
-    return response.status(400).json({ error: 'book is already lent out' })
+    return response.status(400).json({ error: 'Book is already lent out' })
   }
 
   const lentDate = new Date()
@@ -196,16 +196,16 @@ booksRouter.put('/:id/lend', userExtractor, async (request, response) => {
 booksRouter.put('/:id/return', userExtractor, async (request, response) => {
   const book = await Book.findById(request.params.id)
   if (!book) {
-    return response.status(404).json({ error: 'book not found' })
+    return response.status(404).json({ error: 'Book not found' })
   }
 
   if (!book.lending.isLent) {
-    return response.status(400).json({ error: 'book is not currently lent out' })
+    return response.status(400).json({ error: 'Book is not currently lent out' })
   }
 
   // Check if borrower exists
   if (!book.lending.borrower) {
-    return response.status(400).json({ error: 'book lending data is corrupted - no borrower found' })
+    return response.status(400).json({ error: 'Book lending data is corrupted - no borrower found' })
   }
 
   // Allow borrower or admin to return
@@ -213,7 +213,7 @@ booksRouter.put('/:id/return', userExtractor, async (request, response) => {
   const isAdmin = request.user.role === 'admin'
 
   if (!isBorrower && !isAdmin) {
-    return response.status(403).json({ error: 'unauthorized: only the borrower or an admin can return this book' })
+    return response.status(403).json({ error: 'Unauthorized: only the borrower or an admin can return this book' })
   }
 
   // Save the borrower ID before clearing the lending status
@@ -253,12 +253,12 @@ booksRouter.put('/:id/return', userExtractor, async (request, response) => {
 booksRouter.put('/:id/clear-history', userExtractor, async (request, response) => {
   const book = await Book.findById(request.params.id)
   if (!book) {
-    return response.status(404).json({ error: 'book not found' })
+    return response.status(404).json({ error: 'Book not found' })
   }
 
   // Only admins can clear history
   if (!request.user || request.user.role !== 'admin') {
-    return response.status(403).json({ error: 'only admins can clear borrowing history' })
+    return response.status(403).json({ error: 'Only admins can clear borrowing history' })
   }
 
   // Clear the lending history

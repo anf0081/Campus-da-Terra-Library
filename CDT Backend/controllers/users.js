@@ -15,18 +15,18 @@ usersRouter.get('/', async (request, response) => {
   const token = getTokenFrom(request)
 
   if (!token) {
-    return response.status(401).json({ error: 'token missing' })
+    return response.status(401).json({ error: 'Token missing' })
   }
 
   try {
     const decodedToken = jwt.verify(token, process.env.SECRET)
     if (!decodedToken.id) {
-      return response.status(401).json({ error: 'token invalid' })
+      return response.status(401).json({ error: 'Token invalid' })
     }
 
     const requestingUser = await User.findById(decodedToken.id)
     if (!requestingUser || requestingUser.role !== 'admin') {
-      return response.status(403).json({ error: 'permission denied - admin access required' })
+      return response.status(403).json({ error: 'Permission denied - admin access required' })
     }
 
     const users = await User.find({})
@@ -35,10 +35,10 @@ usersRouter.get('/', async (request, response) => {
     response.json(users)
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
-      return response.status(401).json({ error: 'token invalid' })
+      return response.status(401).json({ error: 'Token invalid' })
     }
     console.error('Error fetching users:', error)
-    response.status(500).json({ error: 'internal server error' })
+    response.status(500).json({ error: 'Internal server error' })
   }
 })
 
@@ -60,12 +60,12 @@ usersRouter.post('/', async (request, response) => {
 
   const existingUser = await User.findOne({ username })
   if (existingUser) {
-    return response.status(400).json({ error: 'username must be unique' })
+    return response.status(400).json({ error: 'Username must be unique' })
   }
 
   const existingEmail = await User.findOne({ email })
   if (existingEmail) {
-    return response.status(400).json({ error: 'email must be unique' })
+    return response.status(400).json({ error: 'Email must be unique' })
   }
 
   const saltRounds = 10
@@ -88,12 +88,12 @@ usersRouter.post('/', async (request, response) => {
     }
     if (error.code === 11000) {
       if (error.keyPattern?.username) {
-        return response.status(400).json({ error: 'username must be unique' })
+        return response.status(400).json({ error: 'Username must be unique' })
       }
       if (error.keyPattern?.email) {
-        return response.status(400).json({ error: 'email must be unique' })
+        return response.status(400).json({ error: 'Email must be unique' })
       }
-      return response.status(400).json({ error: 'duplicate key error' })
+      return response.status(400).json({ error: 'Duplicate key error' })
     }
     throw error
   }
@@ -121,20 +121,20 @@ usersRouter.put('/:id', async (request, response) => {
   const token = getTokenFrom(request)
 
   if (!token) {
-    return response.status(401).json({ error: 'token missing' })
+    return response.status(401).json({ error: 'Token missing' })
   }
 
   try {
     const decodedToken = jwt.verify(token, process.env.SECRET)
     if (!decodedToken.id) {
-      return response.status(401).json({ error: 'token invalid' })
+      return response.status(401).json({ error: 'Token invalid' })
     }
 
     // Check if user is updating their own profile or is admin
     if (decodedToken.id !== request.params.id) {
       const requestingUser = await User.findById(decodedToken.id)
       if (!requestingUser || requestingUser.role !== 'admin') {
-        return response.status(403).json({ error: 'permission denied' })
+        return response.status(403).json({ error: 'Permission denied' })
       }
     }
 
@@ -172,23 +172,23 @@ usersRouter.put('/:id', async (request, response) => {
     )
 
     if (!updatedUser) {
-      return response.status(404).json({ error: 'user not found' })
+      return response.status(404).json({ error: 'User not found' })
     }
 
     console.log('User updated successfully:', updatedUser._id)
     response.json(updatedUser)
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
-      return response.status(401).json({ error: 'token invalid' })
+      return response.status(401).json({ error: 'Token invalid' })
     }
     if (error.name === 'ValidationError') {
       return response.status(400).json({ error: error.message })
     }
     if (error.code === 11000) {
-      return response.status(400).json({ error: 'email must be unique' })
+      return response.status(400).json({ error: 'Email must be unique' })
     }
     console.error('Error updating user:', error)
-    response.status(500).json({ error: 'internal server error' })
+    response.status(500).json({ error: 'Internal server error' })
   }
 })
 
@@ -197,41 +197,41 @@ usersRouter.delete('/:id', async (request, response) => {
   const token = getTokenFrom(request)
 
   if (!token) {
-    return response.status(401).json({ error: 'token missing' })
+    return response.status(401).json({ error: 'Token missing' })
   }
 
   try {
     const decodedToken = jwt.verify(token, process.env.SECRET)
     if (!decodedToken.id) {
-      return response.status(401).json({ error: 'token invalid' })
+      return response.status(401).json({ error: 'Token invalid' })
     }
 
     const requestingUser = await User.findById(decodedToken.id)
     if (!requestingUser || requestingUser.role !== 'admin') {
-      return response.status(403).json({ error: 'permission denied - admin access required' })
+      return response.status(403).json({ error: 'Permission denied - admin access required' })
     }
 
     const userToDelete = await User.findById(request.params.id)
     if (!userToDelete) {
-      return response.status(404).json({ error: 'user not found' })
+      return response.status(404).json({ error: 'User not found' })
     }
 
     // Prevent admin from deleting themselves
     if (decodedToken.id === request.params.id) {
-      return response.status(400).json({ error: 'cannot delete your own account' })
+      return response.status(400).json({ error: 'Cannot delete your own account' })
     }
 
     await User.findByIdAndDelete(request.params.id)
     response.status(204).end()
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
-      return response.status(401).json({ error: 'token invalid' })
+      return response.status(401).json({ error: 'Token invalid' })
     }
     if (error.kind === 'ObjectId') {
-      return response.status(400).json({ error: 'malformatted id' })
+      return response.status(400).json({ error: 'Malformatted id' })
     }
     console.error('Error deleting user:', error)
-    response.status(500).json({ error: 'internal server error' })
+    response.status(500).json({ error: 'Internal server error' })
   }
 })
 

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import Book from './Book'
 import BookForm from './BookForm'
 import bookService from '../services/books'
 import userService from '../services/users'
+import studentService from '../services/students'
 
 const Library = ({ user, setMessage, setClassName }) => {
   const [books, setBooks] = useState([])
@@ -12,6 +13,10 @@ const Library = ({ user, setMessage, setClassName }) => {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [users, setUsers] = useState([])
+  const [students, setStudents] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedLanguage, setSelectedLanguage] = useState('')
+  const [selectedDifficulty, setSelectedDifficulty] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -37,6 +42,40 @@ const Library = ({ user, setMessage, setClassName }) => {
         })
     }
   }, [user])
+
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      studentService.getAll()
+        .then(setStudents)
+        .catch(error => {
+          console.error('Error fetching students:', error)
+          setStudents([])
+        })
+    }
+  }, [user])
+
+  const uniqueLanguages = useMemo(() => {
+    const languages = books
+      .map(book => book.language)
+      .filter(lang => lang && lang.trim() !== '')
+    return [...new Set(languages)].sort()
+  }, [books])
+
+  const filteredBooks = useMemo(() => {
+    return books.filter(book => {
+      const matchesSearch = searchTerm === '' ||
+        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        book.author.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchesLanguage = selectedLanguage === '' ||
+        book.language === selectedLanguage
+
+      const matchesDifficulty = selectedDifficulty === '' ||
+        book.difficulty === selectedDifficulty
+
+      return matchesSearch && matchesLanguage && matchesDifficulty
+    })
+  }, [books, searchTerm, selectedLanguage, selectedDifficulty])
 
   if (loading) return <div className="loading">Loading books...</div>
 
@@ -104,20 +143,64 @@ const Library = ({ user, setMessage, setClassName }) => {
     }
   }
 
-const borrowedBooks = (user?.role === 'admin')
-  ? books.filter(b => b.lending.isLent)
-  : (user ? books.filter(b => b.lending.borrower?.id === user.id) : [])
+  const handleAddToWishlist = async (studentId, bookId) => {
+    try {
+      await studentService.addToWishlist(studentId, bookId)
+      setMessage('Book added to wishlist successfully')
+      setClassName('success')
+    } catch (error) {
+      const backendMsg = error.response?.data?.error
+      setMessage(backendMsg || 'Failed to add book to wishlist')
+      setClassName('error')
+    } finally {
+      setTimeout(() => setMessage(null), 5000)
+    }
+  }
 
-const availableBooks = books.filter(b => !borrowedBooks.includes(b))
+const borrowedBooks = (user?.role === 'admin')
+  ? filteredBooks.filter(b => b.lending.isLent)
+  : (user ? filteredBooks.filter(b => b.lending.borrower?.id === user.id) : [])
+
+const availableBooks = filteredBooks.filter(b => !borrowedBooks.includes(b))
 
 
   return (
     <div className="library-container">
-      <h2>Campus da Terra Library</h2>
-      <div className="library-actions">
-        {user && user.role === 'admin' && (
-          <button className="outlined" onClick={() => setShowCreateForm(true)}>Add New Book</button>
-        )}
+      <div className="library-header">
+        <h2 className="library-title">Campus da Terra Library</h2>
+        <div className="library-controls">
+          <input
+            type="text"
+            placeholder="Search books..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+          <select
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All Languages</option>
+            {uniqueLanguages.map(language => (
+              <option key={language} value={language}>{language}</option>
+            ))}
+          </select>
+          <select
+            value={selectedDifficulty}
+            onChange={(e) => setSelectedDifficulty(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All Levels</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+            <option value="Expert">Expert</option>
+          </select>
+          {user && user.role === 'admin' && (
+            <button className="outlined" onClick={() => setShowCreateForm(true)}>Add New Book</button>
+          )}
+        </div>
       </div>
 
       {borrowedBooks.length > 0 && (
@@ -130,12 +213,14 @@ const availableBooks = books.filter(b => !borrowedBooks.includes(b))
                 book={book}
                 user={user}
                 users={users}
+                students={students}
                 onBorrow={() => handleAction('borrow', book.id)}
                 onLendTo={(userId) => handleAction('lendTo', book.id, { userId })}
                 onReturn={() => handleAction('return', book.id)}
                 onClearHistory={() => handleAction('clearHistory', book.id)}
                 onUpdateBook={(data) => handleAction('update', book.id, data)}
                 onDeleteBook={() => handleAction('delete', book.id)}
+                onAddToWishlist={handleAddToWishlist}
               />
             )}
           </div>
@@ -156,12 +241,14 @@ const availableBooks = books.filter(b => !borrowedBooks.includes(b))
               book={book}
               user={user}
               users={users}
+              students={students}
               onBorrow={() => handleAction('borrow', book.id)}
               onLendTo={(userId) => handleAction('lendTo', book.id, { userId })}
               onReturn={() => handleAction('return', book.id)}
               onClearHistory={() => handleAction('clearHistory', book.id)}
               onUpdateBook={(data) => handleAction('update', book.id, data)}
               onDeleteBook={() => handleAction('delete', book.id)}
+              onAddToWishlist={handleAddToWishlist}
             />
           )}
         </div>

@@ -12,9 +12,9 @@ import userService from './services/users'
 import studentService from './services/students'
 import dashboardService from './services/dashboards'
 import Notification from './components/Notification'
-import { setOnTokenExpiredCallback } from './utils/apiClient'
+import { setToken as setApiToken } from './utils/apiClient'
 
-const App = () => {
+const AppContent = () => {
   const [user, setUser] = useState(null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -25,36 +25,32 @@ const App = () => {
   const handleLogout = useCallback((message = 'Logged out successfully') => {
     window.localStorage.removeItem('loggedlibraryUser')
     setUser(null)
+    setApiToken(null)
     bookService.setToken(null)
     userService.setToken(null)
     studentService.setToken(null)
     dashboardService.setToken(null)
     setMessage(message)
     setClassName('success')
+    window.location.href = '/'
     setTimeout(() => {
       setMessage(null)
       setClassName('error')
     }, 5000)
   }, [])
 
-  const handleTokenExpired = useCallback(() => {
-    handleLogout('Your session has expired. Please log in again.')
-  }, [handleLogout])
-
   useEffect(() => {
-    setOnTokenExpiredCallback(handleTokenExpired)
-
     const loggedUserJSON = window.localStorage.getItem('loggedlibraryUser')
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
-      console.log('Setting token on page load:', user.token ? 'Token exists' : 'No token')
       setUser(user)
+      setApiToken(user.token)
       bookService.setToken(user.token)
       userService.setToken(user.token)
       studentService.setToken(user.token)
       dashboardService.setToken(user.token)
     }
-  }, [handleTokenExpired])
+  }, [handleLogout])
   
 
   const handleLogin = async event => {
@@ -65,6 +61,7 @@ const App = () => {
         'loggedlibraryUser', JSON.stringify(user)
       )
 
+      setApiToken(user.token)
       bookService.setToken(user.token)
       userService.setToken(user.token)
       studentService.setToken(user.token)
@@ -91,30 +88,36 @@ const App = () => {
 
 
   return (
+    <div>
+      <Header
+        user={user}
+        handleLogin={handleLogin}
+        username={username}
+        setUsername={setUsername}
+        password={password}
+        setPassword={setPassword}
+        rememberMe={rememberMe}
+        setRememberMe={setRememberMe}
+        handleLogout={handleLogout}
+      />
+      <Notification message={message} type={className} />
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Library user={user} setMessage={setMessage} setClassName={setClassName} />} />
+          <Route path="/students" element={<Students user={user} setMessage={setMessage} setClassName={setClassName} />} />
+          <Route path="/dashboard/:studentId" element={<StudentDashboard user={user} setMessage={setMessage} setClassName={setClassName} />} />
+          <Route path="/users" element={<Users user={user} setMessage={setMessage} setClassName={setClassName} />} />
+          <Route path="/profile" element={<Profile user={user} setUser={setUser} setMessage={setMessage} setClassName={setClassName} />} />
+        </Routes>
+      </main>
+    </div>
+  )
+}
+
+const App = () => {
+  return (
     <Router>
-      <div>
-        <Header
-          user={user}
-          handleLogin={handleLogin}
-          username={username}
-          setUsername={setUsername}
-          password={password}
-          setPassword={setPassword}
-          rememberMe={rememberMe}
-          setRememberMe={setRememberMe}
-          handleLogout={handleLogout}
-        />
-        <Notification message={message} type={className} />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Library user={user} setMessage={setMessage} setClassName={setClassName} />} />
-            <Route path="/students" element={<Students user={user} setMessage={setMessage} setClassName={setClassName} />} />
-            <Route path="/dashboard/:studentId" element={<StudentDashboard user={user} setMessage={setMessage} setClassName={setClassName} />} />
-            <Route path="/users" element={<Users user={user} setMessage={setMessage} setClassName={setClassName} />} />
-            <Route path="/profile" element={<Profile user={user} setUser={setUser} setMessage={setMessage} setClassName={setClassName} />} />
-          </Routes>
-        </main>
-      </div>
+      <AppContent />
     </Router>
   )
 }

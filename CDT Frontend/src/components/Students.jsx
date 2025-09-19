@@ -14,6 +14,9 @@ const Students = ({ user, setMessage, setClassName }) => {
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState([])
   const [selectedUserId, setSelectedUserId] = useState('')
+  const [profilePictureFile, setProfilePictureFile] = useState(null)
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null)
+  const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false)
 
   // Form state for all student fields
   const [formData, setFormData] = useState({
@@ -380,6 +383,101 @@ const Students = ({ user, setMessage, setClassName }) => {
     setIsEditing(false)
     setIsCreating(false)
     setSelectedStudent(null)
+    setProfilePictureFile(null)
+    setProfilePicturePreview(null)
+  }
+
+  const handleProfilePictureChange = (event) => {
+    const file = event.target.files[0]
+    if (!file) {
+      setProfilePictureFile(null)
+      setProfilePicturePreview(null)
+      return
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setMessage('Please select an image file', 'error')
+      return
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('File size must be less than 5MB', 'error')
+      return
+    }
+
+    setProfilePictureFile(file)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setProfilePicturePreview(e.target.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleProfilePictureUpload = async () => {
+    if (!profilePictureFile || !selectedStudent?.id) return
+
+    try {
+      setUploadingProfilePicture(true)
+      const updatedStudent = await studentService.uploadProfilePicture(selectedStudent.id, profilePictureFile)
+
+      // Update the student in the list
+      setStudents(prev => prev.map(s =>
+        s.id === selectedStudent.id ? updatedStudent : s
+      ))
+
+      // Update selected student
+      setSelectedStudent(updatedStudent)
+
+      setMessage('Profile picture uploaded successfully')
+      setProfilePictureFile(null)
+      setProfilePicturePreview(null)
+    } catch (error) {
+      console.error('Error uploading profile picture:', error)
+      setMessage(error.response?.data?.error || 'Failed to upload profile picture', 'error')
+    } finally {
+      setUploadingProfilePicture(false)
+    }
+  }
+
+  const handleProfilePictureRemove = async () => {
+    if (!selectedStudent?.id || !selectedStudent?.profilePicture) return
+
+    if (!window.confirm('Are you sure you want to remove the profile picture?')) return
+
+    try {
+      setUploadingProfilePicture(true)
+      const updatedStudent = await studentService.removeProfilePicture(selectedStudent.id)
+
+      // Update the student in the list
+      setStudents(prev => prev.map(s =>
+        s.id === selectedStudent.id ? updatedStudent : s
+      ))
+
+      // Update selected student
+      setSelectedStudent(updatedStudent)
+
+      setMessage('Profile picture removed successfully')
+    } catch (error) {
+      console.error('Error removing profile picture:', error)
+      setMessage(error.response?.data?.error || 'Failed to remove profile picture', 'error')
+    } finally {
+      setUploadingProfilePicture(false)
+    }
+  }
+
+  if (!user) {
+    return (
+      <div className="access-denied">
+        <div className="access-denied-content">
+          <h2>Please log in to access this page</h2>
+          <p>You need to be logged in to view students.</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -392,12 +490,14 @@ const Students = ({ user, setMessage, setClassName }) => {
       <div>
         <h2>Students</h2>
         <div className="students-container">
-          <div className="students-actions">
-            <button className="outlined" onClick={handleCreateStart}>Add New Student</button>
-          </div>
+          {user?.role === 'admin' && (
+            <div className="students-actions">
+              <button className="outlined" onClick={handleCreateStart}>Add New Student</button>
+            </div>
+          )}
 
           {students.length === 0 ? (
-            <p>No students found. Add your first student!</p>
+            <p>No students found.{user?.role === 'admin' ? ' Add your first student!' : ' Contact an administrator to add students.'}</p>
           ) : (
             <div className="students-list">
               {students.map(student => (
@@ -463,6 +563,78 @@ const Students = ({ user, setMessage, setClassName }) => {
               {/* Personal Information */}
               <div className="form-section">
                 <h3>Personal Information</h3>
+
+                {/* Profile Picture Upload */}
+                {!isCreating && (
+                  <div className="form-group profile-picture-section">
+                    <label>Profile Picture{user?.role !== 'admin' ? ' (Admin Only)' : ''}</label>
+                    <div className="profile-picture-upload">
+                      <div className="current-picture">
+                        {selectedStudent?.profilePicture ? (
+                          <img
+                            src={selectedStudent.profilePicture.startsWith('http')
+                              ? selectedStudent.profilePicture
+                              : `${import.meta.env.VITE_API_URL || 'http://localhost:3003'}${selectedStudent.profilePicture}`}
+                            alt="Profile"
+                            className="student-avatar-large"
+                          />
+                        ) : (
+                          <div className="student-avatar-large placeholder">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                              <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      {profilePicturePreview && (
+                        <div className="picture-preview">
+                          <label>Preview:</label>
+                          <img src={profilePicturePreview} alt="Preview" className="student-avatar-large" />
+                        </div>
+                      )}
+
+                      {user?.role === 'admin' && (
+                        <div className="picture-controls">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleProfilePictureChange}
+                            style={{ display: 'none' }}
+                            id="profilePictureInput"
+                          />
+                          <label htmlFor="profilePictureInput" className="btn-terra small">
+                            Choose Picture
+                          </label>
+
+                          {profilePictureFile && (
+                            <button
+                              type="button"
+                              onClick={handleProfilePictureUpload}
+                              disabled={uploadingProfilePicture}
+                              className="btn-terra small"
+                            >
+                              {uploadingProfilePicture ? 'Uploading...' : 'Upload Picture'}
+                            </button>
+                          )}
+
+                          {selectedStudent?.profilePicture && (
+                            <button
+                              type="button"
+                              onClick={handleProfilePictureRemove}
+                              disabled={uploadingProfilePicture}
+                              className="btn-terra small outlined remove"
+                            >
+                              Remove Picture
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label>First Name{user?.role !== 'admin' ? ' (Admin Only)' : ''}</label>
                   <input

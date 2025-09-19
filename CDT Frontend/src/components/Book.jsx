@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import WishlistPopup from './WishlistPopup'
 
-const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHistory, onUpdateBook, onDeleteBook }) => {
+const Book = ({ book, user, users = [], students = [], onBorrow, onLendTo, onReturn, onClearHistory, onUpdateBook, onDeleteBook, onAddToWishlist }) => {
   const [showHistory, setShowHistory] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
+  const [showWishlistPopup, setShowWishlistPopup] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState('')
   const isAvailable = !book.lending?.isLent
   const isAdmin = user?.role === 'admin'
@@ -12,6 +14,7 @@ const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHis
     book.lending?.borrower &&
     String(book.lending.borrower._id || book.lending.borrower.id || book.lending.borrower).trim() === String(user.id).trim()
   const canBorrow = user && user.role !== 'admin' && user.role !== 'tutor' && isAvailable
+  const canWishlist = user && user.role !== 'admin' && students && students.length > 0
 
   let daysLeft = null
   if (isBorrower && book.lending?.dueDate) {
@@ -57,6 +60,21 @@ const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHis
     }
   }
 
+  const handleWishlistClick = () => {
+    if (students.length === 1) {
+      onAddToWishlist(students[0].id, book.id)
+    } else {
+      setShowWishlistPopup(true)
+    }
+  }
+
+  const handleWishlistAdd = (selectedStudentIds) => {
+    selectedStudentIds.forEach(studentId => {
+      onAddToWishlist(studentId, book.id)
+    })
+    setShowWishlistPopup(false)
+  }
+
   return (
     <div className={`book-card ${showHistory ? 'popup-open' : ''}`}>
       <div className="book-image-container">
@@ -74,16 +92,6 @@ const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHis
         <div className="book-info">
           <h4 className="book-title">{book.title}</h4>
           <p className="book-author">by {book.author}</p>
-          {book.language && (
-            <p className="book-language">
-              <span className="book-meta-label">Language:</span> {book.language}
-            </p>
-          )}
-          {book.difficulty && (
-            <p className="book-difficulty">
-              <span className="book-meta-label">Difficulty:</span> {book.difficulty}
-            </p>
-          )}
         </div>
 
         <div className="book-status">
@@ -107,17 +115,8 @@ const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHis
             </div>
           )}
         </div>
-
-        <div className="book-actions">
-          <div className="action-buttons">
-            {canBorrow && (
-              <button className="borrow-btn" onClick={() => onBorrow(book.id)}>
-                Borrow for 3 weeks
-              </button>
-            )}
-            {isAdmin && isAvailable && users.length > 0 && (
-              <div className="admin-lend-controls">
-                <select
+        {isAdmin && isAvailable && users.length > 0 && (
+          <select
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
                   className="user-select"
@@ -129,17 +128,27 @@ const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHis
                     </option>
                   ))}
                 </select>
+          )}
+        <div className="book-actions">
+          <div className="action-buttons">
+            {canBorrow && (
+              <button className="borrow-btn" onClick={() => onBorrow(book.id)}>
+                Borrow Book
+              </button>
+            )}
+            {isAdmin && isAvailable && users.length > 0 && (
+              <div className="admin-lend-controls">
                 <button
                   className="lend-btn"
                   onClick={handleLendTo}
                   disabled={!selectedUserId}
                 >
-                  Lend for 3 weeks
+                  Lend Book
                 </button>
               </div>
             )}
             {(book.lending?.isLent && (isBorrower || isAdmin)) && (
-              <button className="outlined" onClick={() => onReturn(book.id)}>
+              <button onClick={() => onReturn(book.id)}>
                 Return Book
               </button>
             )}
@@ -155,22 +164,35 @@ const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHis
         </div>
       </div>
 
-      {isAdmin && (
+      {(isAdmin || canWishlist) && (
         <div className="book-buttons">
-          <button
-            className="history-btn"
-            onClick={() => setShowHistory(true)}
-            title="View borrowing history"
-          >
-            📖
-          </button>
-          <button
-            className="edit-btn"
-            onClick={() => setShowEditForm(true)}
-            title="Edit book details"
-          >
-            ✏️
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                className="history-btn"
+                onClick={() => setShowHistory(true)}
+                title="View borrowing history"
+              >
+                📖
+              </button>
+              <button
+                className="edit-btn"
+                onClick={() => setShowEditForm(true)}
+                title="Edit book details"
+              >
+                ✏️
+              </button>
+            </>
+          )}
+          {canWishlist && (
+            <button
+              className="wishlist-btn"
+              onClick={handleWishlistClick}
+              title="Add to student wishlist"
+            >
+              ⭐
+            </button>
+          )}
         </div>
       )}
 
@@ -252,6 +274,15 @@ const Book = ({ book, user, users = [], onBorrow, onLendTo, onReturn, onClearHis
           </div>
         </div>,
         document.body
+      )}
+
+      {showWishlistPopup && (
+        <WishlistPopup
+          book={book}
+          students={students}
+          onClose={() => setShowWishlistPopup(false)}
+          onAddToWishlist={handleWishlistAdd}
+        />
       )}
     </div>
   )
