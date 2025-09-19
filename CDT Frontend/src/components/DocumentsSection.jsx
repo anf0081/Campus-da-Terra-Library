@@ -111,10 +111,7 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
                 </div>
                 <div className="document-actions">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(doc);
-                    }}
+                    onClick={() => handleDownload(doc)}
                     className="download-btn btn-small"
                     title="Download document"
                   >
@@ -122,11 +119,8 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
                   </button>
                   {isAdmin && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveDocument(doc._id || doc.id);
-                      }}
-                      className="btn-danger btn-small"
+                      onClick={() => handleRemoveDocument(doc._id || doc.id)}
+                      className="delete-btn btn-small"
                       title="Remove document"
                     >
                       Remove

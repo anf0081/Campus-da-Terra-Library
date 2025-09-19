@@ -22,6 +22,9 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
     if (newEvent.type === 'receipt') {
       newEvent.month = formData.get('month')
       newEvent.year = parseInt(formData.get('year'))
+    } else if (newEvent.type === 'donation_receipt') {
+      newEvent.donorName = formData.get('donorName')
+      newEvent.donationAmount = parseFloat(formData.get('donationAmount'))
     }
 
     const invoiceFile = formData.get('receiptFile')
@@ -32,20 +35,30 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
       // First, create the history event
       const updatedDashboard = await dashboardService.addHistoryEvent(studentId, newEvent)
 
-      // If there's an invoice file and it's a receipt event, upload the file
-      if (invoiceFile && invoiceFile.size > 0 && newEvent.type === 'receipt') {
+      // If there's an invoice file and it's a receipt or donation receipt event, upload the file
+      if (invoiceFile && invoiceFile.size > 0 && (newEvent.type === 'receipt' || newEvent.type === 'donation_receipt')) {
         if (invoiceFile.size > 10 * 1024 * 1024) {
           showMessage('Invoice file size must be less than 10MB', 'error')
           return
         }
 
-        // Find the newly created receipt event to get its ID
-        const receiptEvents = updatedDashboard.history.filter(event =>
-          event.type === 'receipt' &&
-          event.month === newEvent.month &&
-          event.year === newEvent.year
-        )
-        const newReceiptEvent = receiptEvents[receiptEvents.length - 1]
+        // Find the newly created event to get its ID
+        let newReceiptEvent
+        if (newEvent.type === 'receipt') {
+          const receiptEvents = updatedDashboard.history.filter(event =>
+            event.type === 'receipt' &&
+            event.month === newEvent.month &&
+            event.year === newEvent.year
+          )
+          newReceiptEvent = receiptEvents[receiptEvents.length - 1]
+        } else if (newEvent.type === 'donation_receipt') {
+          const donationEvents = updatedDashboard.history.filter(event =>
+            event.type === 'donation_receipt' &&
+            event.donorName === newEvent.donorName &&
+            event.donationAmount === newEvent.donationAmount
+          )
+          newReceiptEvent = donationEvents[donationEvents.length - 1]
+        }
 
         if (newReceiptEvent) {
           await dashboardService.uploadInvoiceFile(studentId, newReceiptEvent._id, invoiceFile)
@@ -145,6 +158,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
     switch (type) {
       case 'enrollment_start': return '🎓'
       case 'receipt': return '📄'
+      case 'donation_receipt': return '❤️'
       case 'enrollment_end': return '🏁'
       default: return '📅'
     }
@@ -154,6 +168,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
     switch (event.type) {
       case 'enrollment_start': return 'Enrollment Start'
       case 'receipt': return `Invoice - ${event.month} ${event.year}`
+      case 'donation_receipt': return `Donation Receipt - ${event.donorName}`
       case 'enrollment_end': return 'Expected Enrollment End'
       default: return event.description || 'Event'
     }
@@ -193,6 +208,14 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                     <span className="event-date">{new Date(event.date).toLocaleDateString()}</span>
                   </div>
                   {event.description && <p className="event-description">{event.description}</p>}
+                  {event.type === 'donation_receipt' && (
+                    <div className="donation-info">
+                      <p className="donation-amount">Amount: ${event.donationAmount}</p>
+                      <p className="donation-thanks" style={{fontStyle: 'italic', color: '#666'}}>
+                        Thank you for supporting us! ❤️
+                      </p>
+                    </div>
+                  )}
                   <div className="event-footer">
                     {event.type === 'receipt' && (
                       <span className={getPaymentStatusClass(event.paymentStatus)}>
@@ -213,7 +236,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                         </button>
                       )}
 
-                      {isAdmin && event.type === 'receipt' && !event.downloadUrl && (
+                      {isAdmin && (event.type === 'receipt' || event.type === 'donation_receipt') && !event.downloadUrl && (
                         <div className="invoice-upload">
                           <input
                             type="file"
@@ -230,15 +253,15 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                           <button
                             onClick={() => document.getElementById(`upload-${event._id}`).click()}
                             className="upload-btn btn-small"
-                            title="Upload invoice"
+                            title={event.type === 'donation_receipt' ? 'Upload donation receipt' : 'Upload invoice'}
                             disabled={uploadingInvoice === event._id}
                           >
-                            {uploadingInvoice === event._id ? 'Uploading...' : 'Upload Invoice'}
+                            {uploadingInvoice === event._id ? 'Uploading...' : event.type === 'donation_receipt' ? 'Upload Receipt' : 'Upload Invoice'}
                           </button>
                         </div>
                       )}
 
-                      {isAdmin && event.type === 'receipt' && event.downloadUrl && (
+                      {isAdmin && (event.type === 'receipt' || event.type === 'donation_receipt') && event.downloadUrl && (
                         <>
                           <div className="invoice-replace">
                             <input
@@ -256,19 +279,19 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                             <button
                               onClick={() => document.getElementById(`replace-${event._id}`).click()}
                               className="replace-btn btn-small"
-                              title="Replace invoice"
+                              title={event.type === 'donation_receipt' ? 'Replace donation receipt' : 'Replace invoice'}
                               disabled={uploadingInvoice === event._id}
                             >
-                              {uploadingInvoice === event._id ? 'Replacing...' : 'Replace Invoice'}
+                              {uploadingInvoice === event._id ? 'Replacing...' : event.type === 'donation_receipt' ? 'Replace Receipt' : 'Replace Invoice'}
                             </button>
                           </div>
                           <button
                             onClick={() => handleDeleteInvoice(event._id)}
                             className="btn-danger btn-small"
-                            title="Delete invoice"
+                            title={event.type === 'donation_receipt' ? 'Delete donation receipt' : 'Delete invoice'}
                             disabled={uploadingInvoice === event._id}
                           >
-                            Delete Invoice
+                            {event.type === 'donation_receipt' ? 'Delete Receipt' : 'Delete Invoice'}
                           </button>
                         </>
                       )}
@@ -319,6 +342,7 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
                       <option value="">Select event type</option>
                       <option value="enrollment_start">Enrollment Start</option>
                       <option value="receipt">Receipt</option>
+                      <option value="donation_receipt">Donation Receipt</option>
                       <option value="enrollment_end">Expected Enrollment End</option>
                     </select>
                   </div>
@@ -364,6 +388,37 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
         accept=".pdf,.jpg,.jpeg,.png"
       />
       <small>Accepted formats: PDF, JPG, PNG (Max: 10MB)</small>
+    </div>
+  </>
+)}
+
+                  {eventType === 'donation_receipt' && (
+  <>
+    <div className="form-group">
+      <label htmlFor="donorName">Donor Name:</label>
+      <input type="text" id="donorName" name="donorName" placeholder="e.g., John Smith" required />
+    </div>
+
+    <div className="form-group">
+      <label htmlFor="donationAmount">Donation Amount:</label>
+      <input type="number" id="donationAmount" name="donationAmount" step="0.01" min="0.01" placeholder="e.g., 100.00" required />
+    </div>
+
+    <div className="form-group">
+      <label htmlFor="receiptFile">Donation Receipt File (Optional):</label>
+      <input
+        type="file"
+        id="receiptFile"
+        name="receiptFile"
+        accept=".pdf,.jpg,.jpeg,.png"
+      />
+      <small>Accepted formats: PDF, JPG, PNG (Max: 10MB)</small>
+    </div>
+
+    <div className="donation-thank-you">
+      <p style={{fontStyle: 'italic', color: '#666', textAlign: 'center', margin: '10px 0'}}>
+        Thank you for supporting us! ❤️
+      </p>
     </div>
   </>
 )}

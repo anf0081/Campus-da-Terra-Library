@@ -42,7 +42,7 @@ const dashboardSchema = mongoose.Schema({
   history: [{
     type: {
       type: String,
-      enum: ['enrollment_start', 'receipt', 'enrollment_end'],
+      enum: ['enrollment_start', 'receipt', 'enrollment_end', 'donation_receipt'],
       required: true
     },
     date: {
@@ -51,6 +51,8 @@ const dashboardSchema = mongoose.Schema({
     },
     month: String, // for receipts (e.g., "January")
     year: Number, // for receipts (e.g., 2024)
+    donorName: String, // for donation receipts
+    donationAmount: Number, // for donation receipts
     paymentStatus: {
       type: String,
       enum: ['paid', 'not_paid'],

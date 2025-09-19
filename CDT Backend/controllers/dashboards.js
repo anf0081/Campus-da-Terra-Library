@@ -322,10 +322,20 @@ dashboardsRouter.post('/:studentId/history', userExtractor, async (request, resp
     }
 
     const studentId = request.params.studentId
-    const { type, date, month, year, paymentStatus, downloadUrl, description } = request.body
+    const { type, date, month, year, donorName, donationAmount, paymentStatus, downloadUrl, description } = request.body
 
     if (!type || !date) {
       return response.status(400).json({ error: 'Type and date are required' })
+    }
+
+    // Validate donation receipt specific fields
+    if (type === 'donation_receipt') {
+      if (!donorName) {
+        return response.status(400).json({ error: 'Donor name is required for donation receipts' })
+      }
+      if (!donationAmount || donationAmount <= 0) {
+        return response.status(400).json({ error: 'Valid donation amount is required for donation receipts' })
+      }
     }
 
     let dashboard = await Dashboard.findOne({ studentId })
@@ -333,15 +343,28 @@ dashboardsRouter.post('/:studentId/history', userExtractor, async (request, resp
       dashboard = new Dashboard({ studentId })
     }
 
-    dashboard.history.push({
+    const historyEvent = {
       type,
       date: new Date(date),
-      month,
-      year,
-      paymentStatus: paymentStatus || 'not_paid',
-      downloadUrl,
       description
-    })
+    }
+
+    // Add type-specific fields
+    if (type === 'receipt') {
+      historyEvent.month = month
+      historyEvent.year = year
+      historyEvent.paymentStatus = paymentStatus || 'not_paid'
+    } else if (type === 'donation_receipt') {
+      historyEvent.donorName = donorName
+      historyEvent.donationAmount = donationAmount
+      // Donation receipts don't need payment status as donations are inherently received
+    }
+
+    if (downloadUrl) {
+      historyEvent.downloadUrl = downloadUrl
+    }
+
+    dashboard.history.push(historyEvent)
 
     // Sort history by date
     dashboard.history.sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -405,8 +428,8 @@ dashboardsRouter.post('/:studentId/history/:historyId/receipt', userExtractor, u
       return response.status(404).json({ error: 'History event not found' })
     }
 
-    if (historyEvent.type !== 'receipt') {
-      return response.status(400).json({ error: 'Can only upload invoices for receipt events' })
+    if (historyEvent.type !== 'receipt' && historyEvent.type !== 'donation_receipt') {
+      return response.status(400).json({ error: 'Can only upload files for receipt and donation receipt events' })
     }
 
     // Remove old file from Cloudinary if it exists
