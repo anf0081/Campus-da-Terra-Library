@@ -42,8 +42,8 @@ const LoginForm = ({ handleLogin, username, setUsername, password, setPassword, 
         </label>
       </div>
       <div className="login-popup-actions">
-        <button class="inverted" type="submit">Login</button>
-        <button class="inverted" type="button" onClick={onCancel}>Cancel</button>
+        <button className="inverted" type="submit">Login</button>
+        <button className="inverted" type="button" onClick={onCancel}>Cancel</button>
       </div>
     </form>
   </div>

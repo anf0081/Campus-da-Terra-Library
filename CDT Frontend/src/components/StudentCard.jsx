@@ -1,27 +1,21 @@
+import useSecureImage from '../hooks/useSecureImage'
+
 const StudentCard = ({ student, onView, onEdit, onDelete, onDashboard }) => {
-  // Helper function to get profile picture URL
-  const getProfilePictureUrl = (profilePicture) => {
-    if (!profilePicture) return null
-
-    // If it's already a full URL (Cloudinary), use it directly
-    if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
-      return profilePicture
-    }
-
-    // If it's a relative path (legacy), prepend API URL
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003'
-    return `${API_URL}${profilePicture}`
-  }
+  const { imageUrl, loading: imageLoading } = useSecureImage(student.profilePicture ? student.id || student._id : null)
 
   return (
     <div key={student.id || student._id} className="student-card">
       <div className="student-card-header">
-        {student.profilePicture ? (
+        {student.profilePicture && imageUrl ? (
           <img
-            src={getProfilePictureUrl(student.profilePicture)}
+            src={imageUrl}
             alt={`${student.firstName} ${student.lastName}`}
             className="student-avatar student-avatar-small"
           />
+        ) : imageLoading ? (
+          <div className="student-avatar student-avatar-small placeholder">
+            <div className="loading-spinner">...</div>
+          </div>
         ) : (
           <div className="student-avatar student-avatar-small placeholder">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

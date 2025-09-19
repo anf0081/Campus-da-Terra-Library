@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import dashboardService from '../services/dashboards'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003'
-
 const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -82,15 +80,25 @@ const HistorySection = ({ studentId, history, isAdmin, onUpdate, showMessage }) 
     }
   }
 
-  const handleDownload = (event) => {
+  const handleDownload = async (event) => {
     if (event.downloadUrl) {
-      const link = document.createElement('a')
-      link.href = `${API_URL}${event.downloadUrl}`
-      link.download = `${event.type}_${event.month || ''}_${event.year || new Date(event.date).getFullYear()}.pdf`
-      link.target = '_blank'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      try {
+        const secureUrl = await dashboardService.getSecureInvoiceUrl(studentId, event._id || event.id)
+        const link = document.createElement('a')
+        link.href = secureUrl
+        link.download = `${event.type}_${event.month || ''}_${event.year || new Date(event.date).getFullYear()}.pdf`
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } catch (error) {
+        console.error('Error getting secure download URL:', error)
+        if (error.response?.data?.error?.includes('legacy storage')) {
+          showMessage('This invoice uses legacy storage and needs to be re-uploaded by an administrator for secure access', 'error')
+        } else {
+          showMessage('Failed to download invoice', 'error')
+        }
+      }
     }
   }
 

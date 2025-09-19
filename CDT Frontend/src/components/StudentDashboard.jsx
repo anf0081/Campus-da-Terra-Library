@@ -6,6 +6,7 @@ import PortfolioSection from './PortfolioSection'
 import DocumentsSection from './DocumentsSection'
 import HistorySection from './HistorySection'
 import WishlistSection from './WishlistSection'
+import useSecureImage from '../hooks/useSecureImage'
 
 const StudentDashboard = ({ user, setMessage, setClassName }) => {
   const navigate = useNavigate()
@@ -15,7 +16,12 @@ const StudentDashboard = ({ user, setMessage, setClassName }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-    const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin'
+
+  // Always call hooks at the top level - pass student ID only when we have the student data
+  const { imageUrl, loading: imageLoading } = useSecureImage(
+    student?.profilePicture ? studentId : null
+  )
 
    const fetchStudent = useCallback( async () => {
       try {
@@ -108,30 +114,20 @@ const StudentDashboard = ({ user, setMessage, setClassName }) => {
 
   const studentName = `${student.firstName} ${student.lastName}`
 
-  // Helper function to get profile picture URL
-  const getProfilePictureUrl = (profilePicture) => {
-    if (!profilePicture) return null
-
-    // If it's already a full URL (Cloudinary), use it directly
-    if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
-      return profilePicture
-    }
-
-    // If it's a relative path (legacy), prepend API URL
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003'
-    return `${API_URL}${profilePicture}`
-  }
-
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
         <div className="dashboard-header-content">
-          {student.profilePicture ? (
+          {student.profilePicture && imageUrl ? (
             <img
-              src={getProfilePictureUrl(student.profilePicture)}
+              src={imageUrl}
               alt={studentName}
               className="student-avatar student-avatar-large"
             />
+          ) : imageLoading ? (
+            <div className="student-avatar student-avatar-large placeholder">
+              <div className="loading-spinner">Loading...</div>
+            </div>
           ) : (
             <div className="student-avatar student-avatar-large placeholder">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

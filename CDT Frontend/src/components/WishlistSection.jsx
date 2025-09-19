@@ -5,11 +5,6 @@ import bookService from '../services/books'
 const WishlistSection = ({ studentId, user, showMessage }) => {
   const [wishlist, setWishlist] = useState([])
   const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     const fetchWishlist = async () => {

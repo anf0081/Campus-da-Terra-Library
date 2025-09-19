@@ -57,4 +57,9 @@ const removeProfilePicture = async (studentId) => {
   return response.data
 }
 
-export default { setToken, getAll, getById, create, update, remove, addToWishlist, removeFromWishlist, getWishlist, uploadProfilePicture, removeProfilePicture }
+const getProfilePictureUrl = async (studentId) => {
+  const response = await apiClient.get(`/students/${studentId}/profile-picture`)
+  return response.data
+}
+
+export default { setToken, getAll, getById, create, update, remove, addToWishlist, removeFromWishlist, getWishlist, uploadProfilePicture, removeProfilePicture, getProfilePictureUrl }

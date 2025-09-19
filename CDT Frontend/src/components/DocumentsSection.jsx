@@ -1,17 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import dashboardService from '../services/dashboards'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003'
 
 const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const handleAddDocument = async (event) => {
     event.preventDefault()
@@ -56,14 +49,34 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
     }
   }
 
-  const handleDownload = (doc) => {
-    const link = window.document.createElement('a')
-    link.href = `${API_URL}${doc.url}`
-    link.download = doc.fileName || doc.name || 'document'
-    link.target = '_blank'
-    window.document.body.appendChild(link)
-    link.click()
-    window.document.body.removeChild(link)
+  const handleDownload = async (doc) => {
+    try {
+      const secureUrl = await dashboardService.getSecureDocumentUrl(studentId, doc._id || doc.id)
+      const fileName = doc.fileName || doc.name || 'document'
+
+      // Check if it's a viewable file type (images, PDFs)
+      const isViewable = /\.(pdf|jpg|jpeg|png|gif)$/i.test(fileName)
+
+      const link = window.document.createElement('a')
+      link.href = secureUrl
+      link.download = fileName
+
+      // Only open in new tab for viewable files
+      if (isViewable) {
+        link.target = '_blank'
+      }
+
+      window.document.body.appendChild(link)
+      link.click()
+      window.document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error getting secure download URL:', error)
+      if (error.response?.data?.error?.includes('legacy storage')) {
+        showMessage('This document uses legacy storage and needs to be re-uploaded by an administrator for secure access', 'error')
+      } else {
+        showMessage('Failed to download document', 'error')
+      }
+    }
   }
 
   return (
@@ -85,7 +98,7 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
         {documents?.length > 0 ? (
           <div className="documents-list">
             {documents.map((doc) => (
-              <div key={doc._id || doc.id} className="document-item" onClick={() => handleDownload(doc)}>
+              <div key={doc._id || doc.id} className="document-item">
                 <div className="document-info">
                   <div className="document-name">
                     {doc.name}
@@ -130,7 +143,7 @@ const DocumentsSection = ({ studentId, documents, isAdmin, onUpdate, showMessage
         )}
       </div>
 
-      {mounted && showAddForm && createPortal(
+      {showAddForm && createPortal(
         <div className="form-popup-overlay" onClick={() => setShowAddForm(false)}>
           <div className="form-popup" onClick={(e) => e.stopPropagation()}>
             <div className="popup-header">

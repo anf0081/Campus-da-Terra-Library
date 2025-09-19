@@ -14,7 +14,12 @@ const tokenExtractor = (request, response, next) => {
 
 const userExtractor = async (request, response, next) => {
   try {
-    const token = request.get('authorization')?.replace('Bearer ', '')
+    // Try to get token from Authorization header first, then from query params
+    let token = request.get('authorization')?.replace('Bearer ', '')
+    if (!token && request.query.token) {
+      token = request.query.token
+    }
+
     const decodedToken = jwt.verify(token, process.env.SECRET)
     if (!decodedToken.id) return response.status(401).json({ error: 'Token invalid' })
 

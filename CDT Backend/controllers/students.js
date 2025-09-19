@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken')
 const studentsRouter = require('express').Router()
 const Student = require('../models/student')
 const User = require('../models/user')
-const { uploadProfilePicture, deleteImage, getPublicIdFromUrl } = require('../utils/cloudinary')
+const { uploadProfilePicture, deleteImage, getPublicIdFromUrl, getSignedUrlFromStoredUrl } = require('../utils/cloudinary')
 
 const getTokenFrom = request => {
   const authorization = request.get('authorization')
@@ -505,6 +505,68 @@ studentsRouter.delete('/:id/profile-picture', async (request, response) => {
     }
     console.error('Error removing profile picture:', error)
     response.status(500).json({ error: 'Failed to remove profile picture' })
+  }
+})
+
+// Get secure profile picture URL
+studentsRouter.get('/:id/profile-picture', async (request, response) => {
+  const token = getTokenFrom(request)
+
+  if (!token) {
+    return response.status(401).json({ error: 'Token missing' })
+  }
+
+  try {
+    const decodedToken = jwt.verify(token, process.env.SECRET)
+    if (!decodedToken.id) {
+      return response.status(401).json({ error: 'Token invalid' })
+    }
+
+    const student = await Student.findById(request.params.id)
+    if (!student) {
+      return response.status(404).json({ error: 'Student not found' })
+    }
+
+    const user = await User.findById(decodedToken.id)
+
+    // Check permissions: user can only view their own students' pictures unless they're admin
+    if (user.role !== 'admin' && student.userId.toString() !== decodedToken.id) {
+      return response.status(403).json({ error: 'Permission denied' })
+    }
+
+    if (!student.profilePicture) {
+      return response.status(404).json({ error: 'No profile picture found' })
+    }
+
+    // Generate signed URL for the private image
+    let signedUrl
+    try {
+      signedUrl = getSignedUrlFromStoredUrl(student.profilePicture, {
+        expiresIn: 3600 // 1 hour expiration
+      })
+    } catch (urlError) {
+      console.error('Error in getSignedUrlFromStoredUrl:', urlError)
+      return response.status(500).json({ error: 'Failed to generate secure image URL' })
+    }
+
+    if (!signedUrl) {
+      console.error('Failed to generate signed URL for profile picture:', student.profilePicture)
+      return response.status(500).json({ error: 'Failed to generate secure image URL' })
+    }
+
+    response.json({
+      url: signedUrl,
+      expiresAt: new Date(Date.now() + 3600 * 1000).toISOString() // 1 hour from now
+    })
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return response.status(401).json({ error: 'Token invalid' })
+    }
+    if (error.kind === 'ObjectId') {
+      return response.status(400).json({ error: 'Malformatted id' })
+    }
+    console.error('Error getting profile picture:', error)
+    response.status(500).json({ error: 'Internal server error' })
   }
 })
 

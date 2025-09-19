@@ -1,18 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import dashboardService from '../services/dashboards'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003'
+import SecurePDFViewer from './SecurePDFViewer'
 
 const PortfolioSection = ({ studentId, portfolios = [], isAdmin, onUpdate, showMessage }) => {
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const [replacingPortfolioId, setReplacingPortfolioId] = useState(null) 
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const [replacingPortfolioId, setReplacingPortfolioId] = useState(null)
+  const [viewingPortfolioId, setViewingPortfolioId] = useState(null)
 
   const handleFileUpload = async (event) => {
     event.preventDefault()
@@ -56,14 +51,24 @@ const PortfolioSection = ({ studentId, portfolios = [], isAdmin, onUpdate, showM
     }
   }
 
-  const handleDownload = (portfolio) => {
+  const handleDownload = async (portfolio) => {
     if (portfolio && portfolio.pdfUrl) {
-      const link = document.createElement('a')
-      link.href = `${API_URL}${portfolio.pdfUrl}`
-      link.setAttribute('download', portfolio.fileName || 'portfolio.pdf')
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      try {
+        const secureUrl = await dashboardService.getSecurePortfolioUrl(studentId, portfolio.id || portfolio._id)
+        const link = document.createElement('a')
+        link.href = secureUrl
+        link.setAttribute('download', portfolio.fileName || 'portfolio.pdf')
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } catch (error) {
+        console.error('Error getting secure download URL:', error)
+        if (error.response?.data?.error?.includes('legacy storage')) {
+          showMessage('This portfolio uses legacy storage and needs to be re-uploaded by an administrator for secure access', 'error')
+        } else {
+          showMessage('Failed to download portfolio', 'error')
+        }
+      }
     }
   }
 
@@ -103,60 +108,75 @@ const PortfolioSection = ({ studentId, portfolios = [], isAdmin, onUpdate, showM
       <div className="p-0">
         {portfolios && portfolios.length > 0 ? (
           <div className="space-y-4 portfolios-list">
-            {portfolios.map((portfolio, index) => (
-              <div key={portfolio.id || portfolio._id || index} className="portfolio">
-                <div className="bg-custom-beige rounded-lg p-4 hover:bg-custom-yellow transition-colors duration-200">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-semibold text-accent flex items-center gap-2">
-                        <span className="text-lg">📄</span>
-                        {portfolio.fileName}
-                      </span>
-                      {portfolio.uploadDate && (
-                        <span className="text-sm text-text-secondary flex items-center gap-1">
-                          <span className="text-xs">📅</span>
-                          {new Date(portfolio.uploadDate).toLocaleDateString()}
+            {portfolios.map((portfolio, index) => {
+              if (!portfolio) return null
+
+              return (
+                <div key={portfolio.id || portfolio._id || index} className="portfolio">
+                  <div className="bg-custom-beige rounded-lg p-4 hover:bg-custom-yellow transition-colors duration-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold text-accent flex items-center gap-2">
+                          <span className="text-lg">📄</span>
+                          {portfolio.fileName || 'Untitled Portfolio'}
                         </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => handleDownload(portfolio)}
-                        className="bg-custom-yellow text-text-color border-2 border-custom-yellow px-lg py-md rounded-md font-semibold text-sm cursor-pointer transition-all duration-200 inline-flex items-center justify-center gap-sm min-h-11 hover:bg-accent hover:border-accent hover:text-white hover:translate-y-neg-0.5 hover:shadow-md"
-                      >
-                        Download
-                      </button>
-                      {isAdmin && (
-                        <>
-                          <button
-                            onClick={() => handleReplace(portfolio)}
-                            className="btn-secondary btn-small"
-                          >
-                            Replace
-                          </button>
-                          <button
-                            onClick={() => handleDelete(portfolio)}
-                            className="btn-danger btn-small"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
+                        {portfolio.uploadDate && (
+                          <span className="text-sm text-text-secondary flex items-center gap-1">
+                            <span className="text-xs">📅</span>
+                            {new Date(portfolio.uploadDate).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => setViewingPortfolioId(
+                            viewingPortfolioId === (portfolio.id || portfolio._id) ? null : (portfolio.id || portfolio._id)
+                          )}
+                          className="bg-custom-yellow text-text-color border-2 border-custom-yellow px-lg py-md rounded-md font-semibold text-sm cursor-pointer transition-all duration-200 inline-flex items-center justify-center gap-sm min-h-11 hover:bg-accent hover:border-accent hover:text-white hover:translate-y-neg-0.5 hover:shadow-md"
+                        >
+                          {viewingPortfolioId === (portfolio.id || portfolio._id) ? 'Hide' : 'View'}
+                        </button>
+                        <button
+                          onClick={() => handleDownload(portfolio)}
+                          className="bg-white text-accent border-2 border-accent px-lg py-md rounded-md font-semibold text-sm cursor-pointer transition-all duration-200 inline-flex items-center justify-center gap-sm min-h-11 hover:bg-accent hover:text-white hover:translate-y-neg-0.5 hover:shadow-md"
+                        >
+                          Download
+                        </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => handleReplace(portfolio)}
+                              className="btn-secondary btn-small"
+                            >
+                              Replace
+                            </button>
+                            <button
+                              onClick={() => handleDelete(portfolio)}
+                              className="btn-danger btn-small"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="bg-white rounded-lg border-2 border-custom-beige overflow-hidden">
-                  <iframe
-                    src={`${API_URL}${portfolio.pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-                    title={`Portfolio PDF - ${portfolio.fileName}`}
-                    width="100%"
-                    height="600px"
-                    className="border-none"
-                  />
+                  {(portfolio.id || portfolio._id) && viewingPortfolioId === (portfolio.id || portfolio._id) && (
+                    <div className="mt-4 bg-white rounded-lg border-2 border-custom-beige overflow-hidden">
+                      <SecurePDFViewer
+                        studentId={studentId}
+                        documentId={portfolio.id || portfolio._id}
+                        type="portfolio"
+                        fileName={portfolio.fileName || 'Portfolio'}
+                        width="100%"
+                        height="600px"
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="text-center py-12">
@@ -166,7 +186,7 @@ const PortfolioSection = ({ studentId, portfolios = [], isAdmin, onUpdate, showM
         )}
       </div>
 
-      {mounted && showUploadForm && createPortal(
+      {showUploadForm && createPortal(
         <div className="form-popup-overlay" onClick={() => {
           setShowUploadForm(false)
           setReplacingPortfolioId(null)

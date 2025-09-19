@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import studentService from '../services/students'
 import userService from '../services/users'
 import StudentCard from './StudentCard'
+import useSecureImage from '../hooks/useSecureImage'
 
 const Students = ({ user, setMessage, setClassName }) => {
   const location = useLocation()
@@ -17,6 +18,11 @@ const Students = ({ user, setMessage, setClassName }) => {
   const [profilePictureFile, setProfilePictureFile] = useState(null)
   const [profilePicturePreview, setProfilePicturePreview] = useState(null)
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false)
+
+  // Use secure image hook for the selected student
+  const { imageUrl, loading: imageLoading, refreshUrl, clearUrl } = useSecureImage(
+    selectedStudent?.profilePicture ? selectedStudent.id : null
+  )
 
   // Form state for all student fields
   const [formData, setFormData] = useState({
@@ -433,8 +439,12 @@ const Students = ({ user, setMessage, setClassName }) => {
       setSelectedStudent(updatedStudent)
 
       setMessage('Profile picture uploaded successfully')
+      setClassName('success')
       setProfilePictureFile(null)
       setProfilePicturePreview(null)
+
+      // Refresh the secure image cache
+      setTimeout(() => refreshUrl(), 500)
     } catch (error) {
       console.error('Error uploading profile picture:', error)
       setMessage(error.response?.data?.error || 'Failed to upload profile picture', 'error')
@@ -461,6 +471,10 @@ const Students = ({ user, setMessage, setClassName }) => {
       setSelectedStudent(updatedStudent)
 
       setMessage('Profile picture removed successfully')
+      setClassName('success')
+
+      // Clear the secure image cache
+      clearUrl()
     } catch (error) {
       console.error('Error removing profile picture:', error)
       setMessage(error.response?.data?.error || 'Failed to remove profile picture', 'error')
@@ -520,11 +534,34 @@ const Students = ({ user, setMessage, setClassName }) => {
   // Student Detail/Form View
   return (
     <div>
+      <div className="student-header-content">
+        <div className="current-picture">
+                        {selectedStudent?.profilePicture && imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt="Profile"
+                            className="student-avatar student-avatar-large"
+                          />
+                        ) : imageLoading ? (
+                          <div className="student-avatar-large placeholder">
+                            <div className="loading-spinner">Loading...</div>
+                          </div>
+                        ) : (
+                          <div className="student-avatar-large placeholder">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                              <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
       <h2>
         {isCreating ? 'Add New Student' :
          isEditing ? `Edit ${selectedStudent?.firstName} ${selectedStudent?.lastName}` :
          `${selectedStudent?.firstName} ${selectedStudent?.lastName}`}
       </h2>
+      </div>
 
       <div className="student-detail-container">
         <div className="student-actions">
@@ -570,14 +607,16 @@ const Students = ({ user, setMessage, setClassName }) => {
                     <label>Profile Picture{user?.role !== 'admin' ? ' (Admin Only)' : ''}</label>
                     <div className="profile-picture-upload">
                       <div className="current-picture">
-                        {selectedStudent?.profilePicture ? (
+                        {selectedStudent?.profilePicture && imageUrl ? (
                           <img
-                            src={selectedStudent.profilePicture.startsWith('http')
-                              ? selectedStudent.profilePicture
-                              : `${import.meta.env.VITE_API_URL || 'http://localhost:3003'}${selectedStudent.profilePicture}`}
+                            src={imageUrl}
                             alt="Profile"
                             className="student-avatar-large"
                           />
+                        ) : imageLoading ? (
+                          <div className="student-avatar-large placeholder">
+                            <div className="loading-spinner">Loading...</div>
+                          </div>
                         ) : (
                           <div className="student-avatar-large placeholder">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

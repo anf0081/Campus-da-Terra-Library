@@ -1706,7 +1706,6 @@ h3.event-title {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  margin-top: 1rem;
 }
 
 .no-wishlist {
@@ -1792,7 +1791,6 @@ h3.event-title {
   border-color: #f1a8a8;
 }
 
-/* Student Avatar Styles */
 .student-avatar {
   border-radius: 50%;
   object-fit: cover;
@@ -1810,6 +1808,13 @@ h3.event-title {
   height: 100px;
 }
 
+.student-header-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
 .student-avatar.placeholder {
   display: flex;
   align-items: center;
@@ -1818,7 +1823,6 @@ h3.event-title {
   background-color: var(--custom-beige);
 }
 
-/* Profile Picture Upload Section */
 .profile-picture-section {
   border-bottom: 1px solid var(--custom-beige);
   padding-bottom: 1rem;
@@ -1865,7 +1869,6 @@ h3.event-title {
   text-align: center;
 }
 
-/* Student Card with Avatar */
 .student-card-header {
   display: flex;
   align-items: center;
@@ -1873,17 +1876,14 @@ h3.event-title {
   margin-bottom: 1rem;
 }
 
-.student-card-info h3 {
-  margin: 0 0 0.5rem 0;
-}
-
-/* Dashboard Header with Avatar */
 .dashboard-header-content {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
-.dashboard-student-info h1 {
+.dashboard-student-info h1,
+.student-card-info h3 {
   margin: 0 0 0.5rem 0;
 }

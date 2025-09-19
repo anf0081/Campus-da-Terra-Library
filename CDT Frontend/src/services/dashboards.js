@@ -84,6 +84,30 @@ const deleteInvoiceFile = async (studentId, historyId) => {
   return response.data
 }
 
+const getSecurePortfolioUrl = async (studentId, portfolioId) => {
+  const response = await apiClient.get(`/dashboards/${studentId}/portfolios/${portfolioId}/url`)
+  return response.data.url
+}
+
+const getPortfolioViewUrl = (studentId, portfolioId) => {
+  // Include token in query params for iframe viewing since headers can't be sent
+  const loggedUserJSON = localStorage.getItem('loggedlibraryUser')
+  const token = loggedUserJSON ? JSON.parse(loggedUserJSON).token : null
+  return token
+    ? `/api/dashboards/${studentId}/portfolios/${portfolioId}/view?token=${encodeURIComponent(token)}`
+    : `/api/dashboards/${studentId}/portfolios/${portfolioId}/view`
+}
+
+const getSecureDocumentUrl = async (studentId, documentId) => {
+  const response = await apiClient.get(`/dashboards/${studentId}/documents/${documentId}/url`)
+  return response.data.url
+}
+
+const getSecureInvoiceUrl = async (studentId, historyId) => {
+  const response = await apiClient.get(`/dashboards/${studentId}/history/${historyId}/receipt/url`)
+  return response.data.url
+}
+
 export default {
   setToken,
   getByStudentId,
@@ -96,5 +120,9 @@ export default {
   addHistoryEvent,
   removeHistoryEvent,
   uploadInvoiceFile,
-  deleteInvoiceFile
+  deleteInvoiceFile,
+  getSecurePortfolioUrl,
+  getPortfolioViewUrl,
+  getSecureDocumentUrl,
+  getSecureInvoiceUrl
 }

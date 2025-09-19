@@ -1,44 +1,19 @@
 const dashboardsRouter = require('express').Router()
-const multer = require('multer')
-const path = require('path')
-const fs = require('fs')
 const Dashboard = require('../models/dashboard')
 const Student = require('../models/student')
 const { userExtractor } = require('../utils/middleware')
+const {
+  uploadPortfolio,
+  uploadDocument,
+  uploadInvoice,
+  deleteImage,
+  getPublicIdFromUrl,
+  getSignedDocumentUrl,
+  getSignedDocumentUrlWithType,
+  getSignedPDFViewUrl
+} = require('../utils/cloudinary')
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = 'uploads/'
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
-    }
-    cb(null, uploadDir)
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname))
-  }
-})
-
-const fileFilter = (req, file, cb) => {
-  // Accept PDFs and common document formats
-  const allowedTypes = /pdf|doc|docx|jpg|jpeg|png/
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase())
-  const mimetype = allowedTypes.test(file.mimetype)
-
-  if (mimetype && extname) {
-    return cb(null, true)
-  } else {
-    cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, PNG files are allowed'))
-  }
-}
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: fileFilter
-})
+// Cloudinary storage configurations are imported from utils/cloudinary.js
 
 // Get dashboard for a student
 dashboardsRouter.get('/:studentId', userExtractor, async (request, response) => {
@@ -108,7 +83,7 @@ dashboardsRouter.put('/:studentId', userExtractor, async (request, response) => 
 })
 
 // Upload portfolio PDF (admin only)
-dashboardsRouter.post('/:studentId/portfolios', userExtractor, upload.single('portfolio'), async (request, response) => {
+dashboardsRouter.post('/:studentId/portfolios', userExtractor, uploadPortfolio.single('portfolio'), async (request, response) => {
   try {
     if (request.user.role !== 'admin') {
       return response.status(403).json({ error: 'Only admins can upload portfolio' })
@@ -119,7 +94,7 @@ dashboardsRouter.post('/:studentId/portfolios', userExtractor, upload.single('po
     }
 
     const studentId = request.params.studentId
-    const fileUrl = `/uploads/${request.file.filename}`
+    const fileUrl = request.file.path // Cloudinary URL
 
     let dashboard = await Dashboard.findOne({ studentId })
     if (!dashboard) {
@@ -173,10 +148,16 @@ dashboardsRouter.delete('/:studentId/portfolios/:portfolioId', userExtractor, as
 
     const portfolio = dashboard.portfolios[portfolioIndex]
 
-    // Remove portfolio file from filesystem
-    const filePath = path.join(__dirname, '..', portfolio.pdfUrl)
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath)
+    // Remove portfolio file from Cloudinary
+    if (portfolio.pdfUrl) {
+      try {
+        const publicId = getPublicIdFromUrl(portfolio.pdfUrl)
+        if (publicId) {
+          await deleteImage(publicId)
+        }
+      } catch (error) {
+        console.error('Error deleting portfolio from Cloudinary:', error)
+      }
     }
 
     // Remove portfolio from array
@@ -192,7 +173,7 @@ dashboardsRouter.delete('/:studentId/portfolios/:portfolioId', userExtractor, as
 })
 
 // Replace specific portfolio (admin only)
-dashboardsRouter.put('/:studentId/portfolios/:portfolioId', userExtractor, upload.single('portfolio'), async (request, response) => {
+dashboardsRouter.put('/:studentId/portfolios/:portfolioId', userExtractor, uploadPortfolio.single('portfolio'), async (request, response) => {
   try {
     if (request.user.role !== 'admin') {
       return response.status(403).json({ error: 'Only admins can replace portfolio' })
@@ -204,7 +185,7 @@ dashboardsRouter.put('/:studentId/portfolios/:portfolioId', userExtractor, uploa
 
     const studentId = request.params.studentId
     const portfolioId = request.params.portfolioId
-    const fileUrl = `/uploads/${request.file.filename}`
+    const fileUrl = request.file.path // Cloudinary URL
 
     const dashboard = await Dashboard.findOne({ studentId })
 
@@ -220,10 +201,16 @@ dashboardsRouter.put('/:studentId/portfolios/:portfolioId', userExtractor, uploa
 
     const oldPortfolio = dashboard.portfolios[portfolioIndex]
 
-    // Remove old portfolio file from filesystem
-    const oldFilePath = path.join(__dirname, '..', oldPortfolio.pdfUrl)
-    if (fs.existsSync(oldFilePath)) {
-      fs.unlinkSync(oldFilePath)
+    // Remove old portfolio file from Cloudinary
+    if (oldPortfolio.pdfUrl) {
+      try {
+        const publicId = getPublicIdFromUrl(oldPortfolio.pdfUrl)
+        if (publicId) {
+          await deleteImage(publicId)
+        }
+      } catch (error) {
+        console.error('Error deleting old portfolio from Cloudinary:', error)
+      }
     }
 
     // Update portfolio data
@@ -245,7 +232,7 @@ dashboardsRouter.put('/:studentId/portfolios/:portfolioId', userExtractor, uploa
 })
 
 // Add document (admin only)
-dashboardsRouter.post('/:studentId/documents', userExtractor, upload.single('document'), async (request, response) => {
+dashboardsRouter.post('/:studentId/documents', userExtractor, uploadDocument.single('document'), async (request, response) => {
   try {
     if (request.user.role !== 'admin') {
       return response.status(403).json({ error: 'Only admins can add documents' })
@@ -261,7 +248,7 @@ dashboardsRouter.post('/:studentId/documents', userExtractor, upload.single('doc
     }
 
     const studentId = request.params.studentId
-    const fileUrl = `/uploads/${request.file.filename}`
+    const fileUrl = request.file.path // Cloudinary URL
 
     let dashboard = await Dashboard.findOne({ studentId })
     if (!dashboard) {
@@ -304,10 +291,16 @@ dashboardsRouter.delete('/:studentId/documents/:documentId', userExtractor, asyn
       return response.status(404).json({ error: 'Document not found' })
     }
 
-    // Remove file from filesystem
-    const filePath = path.join(__dirname, '..', document.url)
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath)
+    // Remove file from Cloudinary
+    if (document.url) {
+      try {
+        const publicId = getPublicIdFromUrl(document.url)
+        if (publicId) {
+          await deleteImage(publicId)
+        }
+      } catch (error) {
+        console.error('Error deleting document from Cloudinary:', error)
+      }
     }
 
     dashboard.documents.pull(documentId)
@@ -389,7 +382,7 @@ dashboardsRouter.delete('/:studentId/history/:historyId', userExtractor, async (
 })
 
 // Upload invoice file (admin only)
-dashboardsRouter.post('/:studentId/history/:historyId/receipt', userExtractor, upload.single('receiptFile'), async (request, response) => {
+dashboardsRouter.post('/:studentId/history/:historyId/receipt', userExtractor, uploadInvoice.single('receiptFile'), async (request, response) => {
   try {
     if (request.user.role !== 'admin') {
       return response.status(403).json({ error: 'Only admins can upload invoices' })
@@ -400,7 +393,7 @@ dashboardsRouter.post('/:studentId/history/:historyId/receipt', userExtractor, u
     }
 
     const { studentId, historyId } = request.params
-    const fileUrl = `/uploads/${request.file.filename}`
+    const fileUrl = request.file.path // Cloudinary URL
 
     const dashboard = await Dashboard.findOne({ studentId })
     if (!dashboard) {
@@ -416,11 +409,15 @@ dashboardsRouter.post('/:studentId/history/:historyId/receipt', userExtractor, u
       return response.status(400).json({ error: 'Can only upload invoices for receipt events' })
     }
 
-    // Remove old file if it exists
+    // Remove old file from Cloudinary if it exists
     if (historyEvent.downloadUrl) {
-      const oldFilePath = path.join('uploads', path.basename(historyEvent.downloadUrl))
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath)
+      try {
+        const publicId = getPublicIdFromUrl(historyEvent.downloadUrl)
+        if (publicId) {
+          await deleteImage(publicId)
+        }
+      } catch (error) {
+        console.error('Error deleting old invoice from Cloudinary:', error)
       }
     }
 
@@ -461,10 +458,14 @@ dashboardsRouter.delete('/:studentId/history/:historyId/receipt', userExtractor,
       return response.status(400).json({ error: 'No invoice file to delete' })
     }
 
-    // Remove file from filesystem
-    const filePath = path.join('uploads', path.basename(historyEvent.downloadUrl))
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath)
+    // Remove file from Cloudinary
+    try {
+      const publicId = getPublicIdFromUrl(historyEvent.downloadUrl)
+      if (publicId) {
+        await deleteImage(publicId)
+      }
+    } catch (error) {
+      console.error('Error deleting invoice from Cloudinary:', error)
     }
 
     // Remove the file URL from the history event
@@ -478,6 +479,264 @@ dashboardsRouter.delete('/:studentId/history/:historyId/receipt', userExtractor,
   } catch (error) {
     console.error('Error deleting invoice:', error)
     response.status(500).json({ error: 'Failed to delete invoice' })
+  }
+})
+
+// Serve portfolio PDF directly for inline viewing
+dashboardsRouter.get('/:studentId/portfolios/:portfolioId/view', userExtractor, async (request, response) => {
+  try {
+    const studentId = request.params.studentId
+    const portfolioId = request.params.portfolioId
+
+    // Check if user has permission
+    if (request.user.role !== 'admin' && request.user.student.toString() !== studentId) {
+      return response.status(403).json({ error: 'Access denied' })
+    }
+
+    const dashboard = await Dashboard.findOne({ studentId })
+    if (!dashboard) {
+      return response.status(404).json({ error: 'Dashboard not found' })
+    }
+
+    const portfolio = dashboard.portfolios.id(portfolioId)
+    if (!portfolio) {
+      return response.status(404).json({ error: 'Portfolio not found' })
+    }
+
+    if (!portfolio.pdfUrl) {
+      return response.status(404).json({ error: 'Portfolio file not found' })
+    }
+
+    // Check if this is an old local file URL or a Cloudinary URL
+    if (portfolio.pdfUrl.startsWith('/uploads/') || !portfolio.pdfUrl.includes('cloudinary.com')) {
+      return response.status(400).json({
+        error: 'This portfolio uses legacy storage and needs to be re-uploaded for secure access'
+      })
+    }
+
+    const publicId = getPublicIdFromUrl(portfolio.pdfUrl)
+
+    if (!publicId) {
+      console.error('Failed to extract publicId from portfolio URL:', portfolio.pdfUrl)
+      return response.status(400).json({ error: 'Invalid portfolio URL format' })
+    }
+
+    const signedUrl = getSignedPDFViewUrl(publicId, { expiresIn: 3600 })
+
+    if (!signedUrl) {
+      return response.status(500).json({ error: 'Failed to generate secure URL' })
+    }
+
+    // Fetch the PDF from Cloudinary and pipe it to the response with proper headers
+    const https = require('https')
+    const url = require('url')
+
+    const parsedUrl = url.parse(signedUrl)
+
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || 443,
+      path: parsedUrl.path,
+      method: 'GET'
+    }
+
+    const req = https.request(options, (pdfResponse) => {
+      if (pdfResponse.statusCode !== 200) {
+        return response.status(pdfResponse.statusCode).json({ error: 'Failed to fetch PDF' })
+      }
+
+      // Set headers for inline PDF viewing
+      response.setHeader('Content-Type', 'application/pdf')
+      response.setHeader('Content-Disposition', 'inline; filename="portfolio.pdf"')
+      response.setHeader('Cache-Control', 'private, max-age=3600')
+
+      // Pipe the PDF content to the response
+      pdfResponse.pipe(response)
+    })
+
+    req.on('error', (error) => {
+      console.error('Error fetching PDF:', error)
+      response.status(500).json({ error: 'Failed to fetch PDF' })
+    })
+
+    req.end()
+
+  } catch (error) {
+    console.error('Error serving portfolio PDF:', error)
+    response.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Get secure portfolio URL (requires permission)
+dashboardsRouter.get('/:studentId/portfolios/:portfolioId/url', userExtractor, async (request, response) => {
+  try {
+    const { studentId, portfolioId } = request.params
+
+    // Check permissions
+    const student = await Student.findById(studentId)
+    if (!student) {
+      return response.status(404).json({ error: 'Student not found' })
+    }
+
+    const isOwner = student.userId.toString() === request.user._id.toString()
+    const isAdmin = request.user.role === 'admin'
+
+    if (!isOwner && !isAdmin) {
+      return response.status(403).json({ error: 'Access denied' })
+    }
+
+    const dashboard = await Dashboard.findOne({ studentId })
+    if (!dashboard) {
+      return response.status(404).json({ error: 'Dashboard not found' })
+    }
+
+    const portfolio = dashboard.portfolios.id(portfolioId)
+    if (!portfolio) {
+      return response.status(404).json({ error: 'Portfolio not found' })
+    }
+
+    if (!portfolio.pdfUrl) {
+      return response.status(404).json({ error: 'Portfolio file not found' })
+    }
+
+    // Check if this is an old local file URL or a Cloudinary URL
+    if (portfolio.pdfUrl.startsWith('/uploads/') || !portfolio.pdfUrl.includes('cloudinary.com')) {
+      return response.status(400).json({
+        error: 'This portfolio uses legacy storage and needs to be re-uploaded for secure access'
+      })
+    }
+
+    const publicId = getPublicIdFromUrl(portfolio.pdfUrl)
+
+    if (!publicId) {
+      console.error('Failed to extract publicId from portfolio URL:', portfolio.pdfUrl)
+      return response.status(400).json({ error: 'Invalid portfolio URL format' })
+    }
+
+    const signedUrl = getSignedPDFViewUrl(publicId, { expiresIn: 3600 })
+
+    if (!signedUrl) {
+      return response.status(500).json({ error: 'Failed to generate secure URL' })
+    }
+
+    response.json({ url: signedUrl })
+  } catch (error) {
+    console.error('Error getting secure portfolio URL:', error)
+    response.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Get secure document URL (requires permission)
+dashboardsRouter.get('/:studentId/documents/:documentId/url', userExtractor, async (request, response) => {
+  try {
+    const { studentId, documentId } = request.params
+
+    // Check permissions
+    const student = await Student.findById(studentId)
+    if (!student) {
+      return response.status(404).json({ error: 'Student not found' })
+    }
+
+    const isOwner = student.userId.toString() === request.user._id.toString()
+    const isAdmin = request.user.role === 'admin'
+
+    if (!isOwner && !isAdmin) {
+      return response.status(403).json({ error: 'Access denied' })
+    }
+
+    const dashboard = await Dashboard.findOne({ studentId })
+    if (!dashboard) {
+      return response.status(404).json({ error: 'Dashboard not found' })
+    }
+
+    const document = dashboard.documents.id(documentId)
+    if (!document) {
+      return response.status(404).json({ error: 'Document not found' })
+    }
+
+    if (!document.url) {
+      return response.status(404).json({ error: 'Document file not found' })
+    }
+
+    // Check if this is an old local file URL or a Cloudinary URL
+    if (document.url.startsWith('/uploads/') || !document.url.includes('cloudinary.com')) {
+      return response.status(400).json({
+        error: 'This document uses legacy storage and needs to be re-uploaded for secure access'
+      })
+    }
+
+    const publicId = getPublicIdFromUrl(document.url)
+    if (!publicId) {
+      return response.status(400).json({ error: 'Invalid document URL format' })
+    }
+
+    const signedUrl = getSignedDocumentUrlWithType(publicId, document.fileName, { expiresIn: 3600 })
+
+    if (!signedUrl) {
+      return response.status(500).json({ error: 'Failed to generate secure URL' })
+    }
+
+    response.json({ url: signedUrl })
+  } catch (error) {
+    console.error('Error getting secure document URL:', error)
+    response.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Get secure invoice URL (requires permission)
+dashboardsRouter.get('/:studentId/history/:historyId/receipt/url', userExtractor, async (request, response) => {
+  try {
+    const { studentId, historyId } = request.params
+
+    // Check permissions
+    const student = await Student.findById(studentId)
+    if (!student) {
+      return response.status(404).json({ error: 'Student not found' })
+    }
+
+    const isOwner = student.userId.toString() === request.user._id.toString()
+    const isAdmin = request.user.role === 'admin'
+
+    if (!isOwner && !isAdmin) {
+      return response.status(403).json({ error: 'Access denied' })
+    }
+
+    const dashboard = await Dashboard.findOne({ studentId })
+    if (!dashboard) {
+      return response.status(404).json({ error: 'Dashboard not found' })
+    }
+
+    const historyEvent = dashboard.history.id(historyId)
+    if (!historyEvent) {
+      return response.status(404).json({ error: 'History event not found' })
+    }
+
+    if (!historyEvent.downloadUrl) {
+      return response.status(404).json({ error: 'Invoice file not found' })
+    }
+
+    // Check if this is an old local file URL or a Cloudinary URL
+    if (historyEvent.downloadUrl.startsWith('/uploads/') || !historyEvent.downloadUrl.includes('cloudinary.com')) {
+      return response.status(400).json({
+        error: 'This invoice uses legacy storage and needs to be re-uploaded for secure access'
+      })
+    }
+
+    const publicId = getPublicIdFromUrl(historyEvent.downloadUrl)
+    if (!publicId) {
+      return response.status(400).json({ error: 'Invalid invoice URL format' })
+    }
+
+    const signedUrl = getSignedDocumentUrl(publicId, { expiresIn: 3600 })
+
+    if (!signedUrl) {
+      return response.status(500).json({ error: 'Failed to generate secure URL' })
+    }
+
+    response.json({ url: signedUrl })
+  } catch (error) {
+    console.error('Error getting secure invoice URL:', error)
+    response.status(500).json({ error: 'Internal server error' })
   }
 })
 
